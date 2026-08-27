@@ -1,6 +1,6 @@
-# Recto
+# ajuba scanner
 
-**Live: https://ianaaya11.github.io/recto**
+**Live: https://ianaaya11.github.io/ajuba-scanner**
 
 
 A document scanner and PDF editor that runs in a desktop browser and as a native
@@ -131,6 +131,9 @@ about 8 MB of WASM out of the bundle.
 - The service worker is registered only on the web. Inside the Android WebView
   it would serve stale assets after an app update.
 - Routing is hash-based so deep links survive the WebView's origin.
+- The IndexedDB store is named after the app. Because IndexedDB is keyed by
+  database name, renaming the app would strand existing scans, so `db.ts`
+  migrates from the earlier names on first run and never deletes the old store.
 - The browser camera needs a **secure context**: HTTPS or `localhost`. Opening
   the dev server over a LAN IP such as `http://192.168.x.x:5180` leaves
   `getUserMedia` undefined and the camera cannot start — the app says so and

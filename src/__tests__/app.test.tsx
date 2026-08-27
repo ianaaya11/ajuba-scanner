@@ -14,7 +14,7 @@ function dragEventWithFiles(type: string, files: File[]) {
 describe('app shell', () => {
   it('renders the library without crashing and settles on the empty state', async () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'Scans' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'ajuba scanner' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'New scan' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Import' })).toBeTruthy();
 

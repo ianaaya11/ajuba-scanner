@@ -95,7 +95,7 @@ check('shutter captures a frame and opens the crop step', true);
 // Back out and use the known test photo, so detection can be scored.
 await page.goto(BASE, { waitUntil: 'networkidle0' });
 await page.evaluate(() => new Promise((res) => {
-  const rq = indexedDB.deleteDatabase('recto');
+  const rq = indexedDB.deleteDatabase('ajuba-scanner');
   rq.onsuccess = rq.onerror = rq.onblocked = () => res();
 }));
 await page.reload({ waitUntil: 'networkidle0' });
@@ -187,7 +187,7 @@ check('OCR completed and flagged the page', !!ocrRan);
 
 const ocr = await page.evaluate(async () => {
   const db = await new Promise((res, rej) => {
-    const r = indexedDB.open('recto');
+    const r = indexedDB.open('ajuba-scanner');
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
   });

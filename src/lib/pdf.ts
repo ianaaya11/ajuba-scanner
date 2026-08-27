@@ -114,8 +114,8 @@ export async function buildPdf(doc: Doc, options: BuildOptions = {}): Promise<Ui
   const { quality = 0.85, onProgress } = options;
   const pdf = await PDFDocument.create();
   pdf.setTitle(doc.name);
-  pdf.setCreator('Recto');
-  pdf.setProducer('Recto');
+  pdf.setCreator('ajuba scanner');
+  pdf.setProducer('ajuba scanner');
   const font = await pdf.embedFont(StandardFonts.Helvetica);
 
   for (const [index, page] of doc.pages.entries()) {

@@ -32,7 +32,7 @@ const SEED = `
   };
 
   const db = await new Promise((res, rej) => {
-    const rq = indexedDB.open('recto', 1);
+    const rq = indexedDB.open('ajuba-scanner', 1);
     rq.onupgradeneeded = () => {
       const d = rq.result;
       const s = d.createObjectStore('docs', { keyPath: 'id' });

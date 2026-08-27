@@ -12,8 +12,8 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'Recto',
-        short_name: 'Recto',
+        name: 'ajuba scanner',
+        short_name: 'ajuba',
         description: 'Scan, edit and export PDFs. Everything stays on your device.',
         theme_color: '#0b0f17',
         background_color: '#0b0f17',

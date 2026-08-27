@@ -1,4 +1,4 @@
-package com.recto.app;
+package com.ajuba.scanner;
 
 import com.getcapacitor.BridgeActivity;
 

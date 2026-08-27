@@ -1,4 +1,4 @@
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Doc, Page } from '../types';
 
 interface ScanDB extends DBSchema {
@@ -6,16 +6,70 @@ interface ScanDB extends DBSchema {
   blobs: { key: string; value: Blob };
 }
 
+const DB_NAME = 'ajuba-scanner';
+
+/** Databases this app used under earlier names, newest first. */
+const LEGACY_NAMES = ['recto', 'scanpdf'];
+
 let dbPromise: Promise<IDBPDatabase<ScanDB>> | null = null;
 
-function db() {
-  dbPromise ??= openDB<ScanDB>('recto', 1, {
+function open(name: string) {
+  return openDB<ScanDB>(name, 1, {
     upgrade(database) {
       const docs = database.createObjectStore('docs', { keyPath: 'id' });
       docs.createIndex('updatedAt', 'updatedAt');
       database.createObjectStore('blobs');
     },
   });
+}
+
+/**
+ * Carries scans across an app rename. Renaming the store would otherwise
+ * strand everything the user had already scanned, since IndexedDB is keyed by
+ * database name.
+ *
+ * Only runs into an empty store, and never deletes the old one — if anything
+ * here goes wrong the previous data is still sitting where it was.
+ */
+async function migrateLegacy(target: IDBPDatabase<ScanDB>): Promise<void> {
+  if ((await target.count('docs')) > 0) return;
+
+  for (const name of LEGACY_NAMES) {
+    let legacy: IDBPDatabase<ScanDB> | null = null;
+    try {
+      legacy = await open(name);
+      // `open` creates the database if it was absent, so an empty one means
+      // there was nothing to migrate; clean up the shell we just made.
+      const docs = await legacy.getAll('docs');
+      if (!docs.length) {
+        legacy.close();
+        legacy = null;
+        await deleteDB(name).catch(() => {});
+        continue;
+      }
+
+      for (const doc of docs) {
+        for (const page of doc.pages) {
+          const blob = await legacy.get('blobs', page.imageKey);
+          if (blob) await target.put('blobs', blob, page.imageKey);
+        }
+        await target.put('docs', doc);
+      }
+      legacy.close();
+      return;
+    } catch {
+      // A failed migration must not stop the app from starting.
+      legacy?.close();
+    }
+  }
+}
+
+function db() {
+  dbPromise ??= (async () => {
+    const database = await open(DB_NAME);
+    await migrateLegacy(database).catch(() => {});
+    return database;
+  })();
   return dbPromise;
 }
 

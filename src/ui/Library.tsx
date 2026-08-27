@@ -5,6 +5,7 @@ import { deleteDoc, emptyDoc, listDocs, newPage, putBlob, saveDoc } from '../lib
 import { blobToImageData, canvasToBlob, imageDataToCanvas } from '../lib/image';
 import { isPdf, pdfToCanvases, pickDocuments } from '../lib/pdfImport';
 import { isNative } from '../lib/platform';
+import Backdrop from './Backdrop';
 import { Busy, Confirm, relativeDate, useToast } from './components';
 import { useBlobUrl } from './hooks';
 
@@ -14,7 +15,7 @@ function DocRow({ doc, onOpen, onDelete }: { doc: Doc; onOpen: () => void; onDel
 
   return (
     <div className="doc-row">
-      <button className="doc-row" style={{ border: 'none', background: 'none', padding: 0 }} onClick={onOpen}>
+      <button className="doc-open" onClick={onOpen}>
         {thumb ? <img className="thumb" src={thumb} alt="" /> : <div className="thumb" />}
         <div className="meta">
           <b>{doc.name}</b>
@@ -121,8 +122,10 @@ export default function Library() {
 
   return (
     <div className="app">
+      <Backdrop />
+
       <header className="bar">
-        <h1>Scans</h1>
+        <h1 className="wordmark">ajuba scanner</h1>
       </header>
 
       <div className="body">

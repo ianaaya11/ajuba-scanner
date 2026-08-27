@@ -1,14 +1,38 @@
+/* ============================================================
+   Recto — glass UI
+   Translucent surfaces over a lit background. Dark by design:
+   a scanner is looked at next to the page it is scanning, and a
+   dark shell keeps the paper the brightest thing on screen.
+   ============================================================ */
+
 :root {
-  --bg: #0b0f17;
-  --surface: #141a25;
-  --surface-2: #1c2433;
-  --line: #273040;
-  --text: #e8edf5;
-  --muted: #8d9ab1;
-  --accent: #4f8cff;
+  /* Ground */
+  --bg: #070a12;
+  --bg-2: #0c1120;
+
+  /* Glass: layered white at low alpha, not opaque panels */
+  --glass: rgba(255, 255, 255, .055);
+  --glass-strong: rgba(255, 255, 255, .085);
+  --glass-hi: rgba(255, 255, 255, .14);
+  --stroke: rgba(255, 255, 255, .10);
+  --stroke-hi: rgba(255, 255, 255, .18);
+
+  /* Ink */
+  --text: #eef2fa;
+  --muted: #94a2bd;
+
+  /* Accent */
+  --accent: #5b8cff;
+  --accent-2: #8f6bff;
   --accent-ink: #ffffff;
-  --danger: #f2545b;
-  --radius: 14px;
+  --danger: #ff6b74;
+
+  --radius: 18px;
+  --radius-sm: 12px;
+  --blur: saturate(150%) blur(20px);
+  --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
+  --shadow-lg: 0 30px 70px -28px rgba(0, 0, 0, .9);
+
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   color-scheme: dark;
@@ -20,22 +44,31 @@ html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
-  font: 15px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+
+  /* Aurora wash: three soft pools of colour over a deep base. Fixed so it
+     stays put while content scrolls above it. */
+  background:
+    radial-gradient(1100px 700px at 12% -10%, rgba(91, 140, 255, .20), transparent 60%),
+    radial-gradient(900px 600px at 105% 8%, rgba(143, 107, 255, .16), transparent 58%),
+    radial-gradient(1000px 800px at 50% 115%, rgba(38, 190, 255, .10), transparent 60%),
+    linear-gradient(180deg, var(--bg-2), var(--bg));
+  background-attachment: fixed;
 }
 
 button { font: inherit; color: inherit; cursor: pointer; }
 
 .app {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
-  background: var(--bg);
 }
 
 /* ---------- top bar ---------- */
@@ -43,9 +76,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: calc(var(--safe-top) + 10px) 14px 10px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .03));
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-bottom: 1px solid var(--stroke);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -54,6 +89,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bar h1 {
   font-size: 17px;
   font-weight: 650;
+  letter-spacing: -.01em;
   margin: 0;
   flex: 1;
   min-width: 0;
@@ -62,41 +98,74 @@ button { font: inherit; color: inherit; cursor: pointer; }
   white-space: nowrap;
 }
 
+/* The landing header carries the name; lower case is the mark, so keep any
+   browser or platform capitalisation from undoing it. */
+.wordmark {
+  text-transform: lowercase;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  background: linear-gradient(100deg, var(--text) 30%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .bar .title-input {
   flex: 1;
   min-width: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
   font-size: 17px;
   font-weight: 650;
+  letter-spacing: -.01em;
   color: var(--text);
 }
-.bar .title-input:focus { border-color: var(--line); outline: none; background: var(--surface-2); }
+.bar .title-input:focus {
+  outline: none;
+  background: var(--glass);
+  border-color: var(--stroke-hi);
+}
 
 /* ---------- buttons ---------- */
 .btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  border-radius: 10px;
-  padding: 9px 13px;
-  min-height: 40px;
+  gap: 8px;
+  border: 1px solid var(--stroke);
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-radius: 14px;
+  padding: 10px 16px;
+  min-height: 44px;
   font-weight: 550;
+  letter-spacing: -.005em;
   white-space: nowrap;
-  transition: filter .12s ease;
+  color: var(--text);
+  /* Hairline of light along the top edge — the thing that reads as glass. */
+  box-shadow: inset 0 1px 0 var(--glass-hi), var(--shadow);
+  transition: background .16s ease, border-color .16s ease, transform .1s ease;
 }
-.btn:active { filter: brightness(1.25); }
-.btn:disabled { opacity: .45; cursor: default; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn.ghost { background: transparent; border-color: transparent; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .4; cursor: default; box-shadow: none; }
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: var(--accent-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 12px 30px -12px rgba(91, 140, 255, .8);
+}
+
+.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; }
+.btn.ghost:hover:not(:disabled) { background: var(--glass); }
 .btn.danger { color: var(--danger); }
-.btn.icon { padding: 0; width: 40px; }
-.btn.sm { min-height: 32px; padding: 5px 10px; font-size: 13px; }
+.btn.primary.danger { background: linear-gradient(135deg, #ff5f6d, #d64550); color: #fff; }
+.btn.icon { padding: 0; width: 44px; }
+.btn.sm { min-height: 34px; padding: 6px 12px; font-size: 13px; border-radius: 11px; }
 
 .spacer { flex: 1; }
 
@@ -105,41 +174,75 @@ button { font: inherit; color: inherit; cursor: pointer; }
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 14px;
-  padding-bottom: calc(var(--safe-bottom) + 90px);
+  padding: 16px;
+  padding-bottom: calc(var(--safe-bottom) + 96px);
 }
 
 .empty {
   text-align: center;
   color: var(--muted);
-  padding: 56px 24px;
+  padding: 64px 24px;
+  max-width: 420px;
+  margin: 0 auto;
 }
-.empty strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
+.empty strong {
+  display: block;
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  margin-bottom: 8px;
+}
 
 /* ---------- document list ---------- */
-.doc-list { display: flex; flex-direction: column; gap: 10px; }
+.doc-list { display: flex; flex-direction: column; gap: 12px; }
 
 .doc-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  gap: 14px;
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke);
   border-radius: var(--radius);
-  padding: 10px 12px;
+  padding: 12px 14px;
   text-align: left;
   width: 100%;
+  box-shadow: inset 0 1px 0 var(--glass-hi), var(--shadow);
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
 }
+.doc-open {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
 .doc-row .thumb {
-  width: 46px;
-  height: 60px;
-  border-radius: 6px;
+  width: 48px;
+  height: 62px;
+  border-radius: 9px;
   object-fit: cover;
-  background: var(--surface-2);
+  background: rgba(0, 0, 0, .35);
+  border: 1px solid var(--stroke);
   flex: none;
 }
 .doc-row .meta { flex: 1; min-width: 0; }
-.doc-row .meta b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-row .meta b {
+  display: block;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .doc-row .meta span { color: var(--muted); font-size: 13px; }
 
 /* ---------- page grid ---------- */
@@ -147,28 +250,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: grid;
   /* The per-page tool row needs ~170px; below that the delete button clips. */
   grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .page-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke);
   border-radius: var(--radius);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: inset 0 1px 0 var(--glass-hi), var(--shadow);
+  transition: border-color .18s ease, transform .18s ease;
 }
 .page-card .shot {
   aspect-ratio: 3 / 4;
   width: 100%;
-  background: #05070c;
+  background: rgba(0, 0, 0, .38);
   display: grid;
   place-items: center;
   border: none;
   padding: 0;
   overflow: hidden;
 }
-
 .page-card .thumb-canvas {
   max-width: 100%;
   max-height: 100%;
@@ -178,30 +284,44 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px;
-  border-top: 1px solid var(--line);
+  padding: 5px;
+  border-top: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, .03);
 }
 .page-card .num {
   font-size: 12px;
   color: var(--muted);
-  padding-left: 6px;
+  padding-left: 7px;
   margin-right: auto;
+  font-variant-numeric: tabular-nums;
 }
-.page-card .ocr-flag { color: var(--accent); font-size: 11px; padding-right: 4px; }
+.page-card .ocr-flag {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 2px 6px;
+  margin-right: 2px;
+  border-radius: 6px;
+  background: rgba(91, 140, 255, .16);
+}
 
 /* ---------- bottom action bar ---------- */
 .actions {
   position: sticky;
   bottom: 0;
   display: flex;
-  gap: 10px;
-  padding: 12px 14px calc(var(--safe-bottom) + 12px);
-  background: linear-gradient(to top, var(--bg) 65%, transparent);
+  gap: 12px;
+  padding: 14px 16px calc(var(--safe-bottom) + 14px);
+  background: linear-gradient(180deg, rgba(10, 14, 26, 0), rgba(7, 10, 18, .82) 55%);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-top: 1px solid var(--stroke);
   z-index: 15;
 }
 .actions .btn { flex: 1; }
 
-/* ---------- crop stage ---------- */
+/* ---------- stage (crop, page view, camera) ---------- */
 .stage {
   position: relative;
   flex: 1;
@@ -213,11 +333,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   place-items: center;
-  background: #05070c;
+  background: rgba(0, 0, 0, .42);
   overflow: hidden;
   touch-action: none;
 }
-.stage canvas, .stage img { max-width: 100%; max-height: 100%; display: block; }
+.stage canvas, .stage img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  border-radius: 4px;
+  box-shadow: var(--shadow-lg);
+}
+
 /* Positioned entirely from JS to match the letterboxed page. Setting `inset`
    or `margin: auto` here over-constrains the box and the browser re-centres it,
    which slides the overlay off the image it is meant to sit on. */
@@ -225,170 +352,184 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .filter-strip {
   display: flex;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: 9px;
+  padding: 12px 16px;
   overflow-x: auto;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
+  border-top: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, .04);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
 }
+
 .chip {
-  border: 1px solid var(--line);
-  background: var(--surface-2);
+  border: 1px solid var(--stroke);
+  background: var(--glass);
   border-radius: 999px;
-  padding: 7px 14px;
+  padding: 8px 16px;
   font-size: 13px;
+  font-weight: 550;
   white-space: nowrap;
+  color: var(--text);
+  box-shadow: inset 0 1px 0 var(--glass-hi);
+  transition: background .16s ease, border-color .16s ease;
 }
-.chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip[aria-pressed='true'] {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: var(--accent-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 20px -10px rgba(91, 140, 255, .9);
+}
 
 /* ---------- annotation toolbar ---------- */
 .tool-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, .04);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   overflow-x: auto;
 }
-.swatches { display: flex; gap: 6px; }
+.swatches { display: flex; gap: 7px; }
 .swatch {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 2px solid transparent;
   padding: 0;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(255, 255, 255, .35);
+  transition: transform .14s ease;
 }
-.swatch[aria-pressed='true'] { border-color: var(--text); }
+.swatch[aria-pressed='true'] { border-color: var(--text); transform: scale(1.1); }
 
-.slider { width: 110px; accent-color: var(--accent); }
+.slider { width: 118px; accent-color: var(--accent); }
 
 /* ---------- overlays ---------- */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 7, 12, .78);
+  background: rgba(4, 6, 12, .6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: grid;
   place-items: center;
   z-index: 60;
   padding: 24px;
 }
 .panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 20px;
-  width: min(380px, 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .05));
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke-hi);
+  border-radius: 22px;
+  padding: 22px;
+  width: min(400px, 100%);
+  box-shadow: inset 0 1px 0 var(--glass-hi), var(--shadow-lg);
 }
-.panel h2 { margin: 0 0 6px; font-size: 17px; }
-.panel p { margin: 0 0 16px; color: var(--muted); }
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel p { margin: 0 0 18px; color: var(--muted); }
 .panel .row { display: flex; gap: 10px; }
 .panel textarea, .panel input[type='text'] {
   width: 100%;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
   color: var(--text);
-  padding: 10px;
+  padding: 12px;
   font: inherit;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   resize: vertical;
+}
+.panel textarea:focus, .panel input[type='text']:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .progress {
-  height: 4px;
-  background: var(--surface-2);
+  height: 5px;
+  background: rgba(0, 0, 0, .35);
   border-radius: 999px;
   overflow: hidden;
-  margin-top: 14px;
+  margin-top: 16px;
 }
-.progress i { display: block; height: 100%; background: var(--accent); transition: width .2s ease; }
+.progress i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width .25s ease;
+}
 
 .toast {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--safe-bottom) + 84px);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  bottom: calc(var(--safe-bottom) + 92px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .06));
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke-hi);
   border-radius: 999px;
-  padding: 9px 16px;
+  padding: 11px 20px;
   font-size: 14px;
+  font-weight: 500;
   z-index: 70;
   max-width: 90vw;
   text-align: center;
+  box-shadow: inset 0 1px 0 var(--glass-hi), var(--shadow-lg);
+  animation: toast-in .26s cubic-bezier(.2, .9, .3, 1);
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .spin {
   width: 20px;
   height: 20px;
-  border: 2px solid var(--line);
+  border: 2px solid var(--stroke-hi);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin .7s linear infinite;
+  flex: none;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .ocr-text {
   white-space: pre-wrap;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 14px;
   max-height: 40vh;
   overflow: auto;
   font-size: 13px;
-  margin-bottom: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  color: var(--muted);
 }
 
-/* ---------- pointer and wide-screen refinements ---------- */
-
-/* Hover only where there is a real pointer; touch devices emulate it badly. */
-@media (hover: hover) and (pointer: fine) {
-  .btn:hover:not(:disabled) { border-color: var(--accent); }
-  .btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
-  .doc-row:hover { border-color: var(--accent); }
-  .page-card:hover { border-color: var(--accent); }
-  .chip:hover { border-color: var(--accent); }
-}
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 8px;
-}
-
-@media (min-width: 900px) {
-  .body { padding: 20px 24px 24px; }
-
-  .page-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
-
-  /* Full-bleed buttons read as a phone UI on a wide window; size them to
-     their content and keep them in the corner the eye already goes to. */
-  .actions {
-    justify-content: flex-end;
-    padding: 12px 24px;
-    background: var(--surface);
-    border-top: 1px solid var(--line);
-  }
-  .actions .btn {
-    flex: 0 0 auto;
-    min-width: 150px;
-  }
-  .actions .btn.danger { margin-right: auto; }
-
-  .bar { padding: 12px 24px; }
-}
-
-/* Desktop-only file drop target on the library. */
 .drop-hint {
   position: fixed;
-  inset: 0;
+  inset: 14px;
   z-index: 80;
   display: grid;
   place-items: center;
-  background: rgba(11, 15, 23, .88);
-  border: 3px dashed var(--accent);
+  background: rgba(7, 10, 18, .8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 2px dashed var(--accent);
+  border-radius: 26px;
   font-size: 18px;
   font-weight: 600;
   pointer-events: none;
@@ -407,6 +548,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   max-height: 100%;
   display: block;
   background: #000;
+  border-radius: 6px;
 }
 
 /* Corner marks showing roughly where to hold the page. */
@@ -424,32 +566,155 @@ button { font: inherit; color: inherit; cursor: pointer; }
     linear-gradient(var(--accent), var(--accent)) bottom left / 3px 34px no-repeat,
     linear-gradient(var(--accent), var(--accent)) bottom right / 34px 3px no-repeat,
     linear-gradient(var(--accent), var(--accent)) bottom right / 3px 34px no-repeat;
-  opacity: .85;
+  opacity: .9;
 }
 
 /* Round shutter, sized for a thumb. */
 .btn.shutter {
   flex: 0 0 auto;
-  width: 68px;
-  height: 68px;
-  min-height: 68px;
+  width: 70px;
+  height: 70px;
+  min-height: 70px;
   border-radius: 50%;
   padding: 0;
-  background: transparent;
+  background: rgba(255, 255, 255, .08);
   border: 3px solid var(--text);
   display: grid;
   place-items: center;
+  box-shadow: 0 8px 26px -8px rgba(0, 0, 0, .9);
 }
 .btn.shutter span {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: var(--text);
   transition: transform .1s ease;
 }
-.btn.shutter:active:not(:disabled) span { transform: scale(.88); }
+.btn.shutter:active:not(:disabled) span { transform: scale(.86); }
 .btn.shutter:disabled { opacity: .4; }
 
+/* ---------- animated backdrop mark ---------- */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* A faint pool of light behind the mark so it lifts off the background. */
+.backdrop::after {
+  content: '';
+  position: absolute;
+  width: min(70vw, 480px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(91, 140, 255, .09), transparent 70%);
+  animation: backdrop-glow 14s ease-in-out infinite;
+}
+
+.backdrop-mark {
+  width: min(58vw, 330px);
+  height: auto;
+  /* Drawn as an outline rather than a filled sheet: a solid slab behind the
+     list reads as a stray panel, a wireframe reads as a watermark. */
+  opacity: .16;
+  animation: backdrop-drift 18s ease-in-out infinite;
+}
+
+.backdrop-mark .sheet {
+  fill: rgba(255, 255, 255, .012);
+  stroke: var(--text);
+  stroke-width: 1.4;
+}
+.backdrop-mark .fold {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+.backdrop-mark .lines rect { fill: var(--text); opacity: .5; }
+
+.backdrop-mark .beam {
+  /* Lifted above the sheet's own opacity so the pass stays visible. */
+  opacity: .9;
+  animation: backdrop-scan 6.5s cubic-bezier(.55, 0, .45, 1) infinite;
+}
+
+/* The beam starts above the sheet, sweeps past the bottom, then waits before
+   running again — a scanner pass, not a strobe. */
+@keyframes backdrop-scan {
+  0%        { transform: translateY(0); opacity: 0; }
+  8%        { opacity: 1; }
+  62%       { opacity: 1; }
+  70%, 100% { transform: translateY(146px); opacity: 0; }
+}
+
+@keyframes backdrop-drift {
+  0%, 100% { transform: translateY(-6px) scale(1); }
+  50%      { transform: translateY(6px) scale(1.015); }
+}
+
+@keyframes backdrop-glow {
+  0%, 100% { opacity: .55; transform: scale(.95); }
+  50%      { opacity: 1; transform: scale(1.05); }
+}
+
+/* Content sits above the mark. */
+.app > .bar,
+.app > .body,
+.app > .actions,
+.app > .stage,
+.app > .filter-strip,
+.app > .tool-bar { position: relative; z-index: 1; }
+
+/* ---------- pointer and wide-screen refinements ---------- */
+
+/* Hover only where there is a real pointer; touch devices emulate it badly. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled) { background: var(--glass-strong); border-color: var(--stroke-hi); }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
+  .doc-row:hover { background: var(--glass-strong); border-color: var(--stroke-hi); transform: translateY(-1px); }
+  .page-card:hover { border-color: var(--stroke-hi); transform: translateY(-2px); }
+  .chip:hover { background: var(--glass-strong); border-color: var(--stroke-hi); }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
 @media (min-width: 900px) {
-  .actions .btn.shutter { min-width: 68px; }
+  .body { padding: 24px 28px 28px; }
+
+  .page-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+
+  /* Full-bleed buttons read as a phone UI on a wide window; size them to
+     their content and keep them in the corner the eye already goes to. */
+  .actions {
+    justify-content: flex-end;
+    padding: 14px 28px;
+  }
+  .actions .btn {
+    flex: 0 0 auto;
+    min-width: 152px;
+  }
+  .actions .btn.danger { margin-right: auto; }
+  .actions .btn.shutter { min-width: 70px; }
+
+  .bar { padding: 14px 28px; }
+}
+
+/* Respect a stated preference for less motion: keep the mark, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .backdrop-mark,
+  .backdrop-mark .beam,
+  .backdrop::after,
+  .toast {
+    animation: none;
+  }
+  .backdrop-mark .beam { opacity: .5; transform: translateY(64px); }
+  .btn, .doc-row, .page-card, .chip, .swatch { transition: none; }
 }
