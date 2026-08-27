@@ -393,3 +393,63 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-weight: 600;
   pointer-events: none;
 }
+
+/* ---------- live camera ---------- */
+.camera-frame {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  line-height: 0;
+}
+
+.camera-view {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  background: #000;
+}
+
+/* Corner marks showing roughly where to hold the page. */
+.camera-guide {
+  position: absolute;
+  inset: 8% 6%;
+  pointer-events: none;
+  border-radius: 6px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) top left / 34px 3px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top left / 3px 34px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top right / 34px 3px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top right / 3px 34px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 34px 3px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 3px 34px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 34px 3px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 3px 34px no-repeat;
+  opacity: .85;
+}
+
+/* Round shutter, sized for a thumb. */
+.btn.shutter {
+  flex: 0 0 auto;
+  width: 68px;
+  height: 68px;
+  min-height: 68px;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  border: 3px solid var(--text);
+  display: grid;
+  place-items: center;
+}
+.btn.shutter span {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform .1s ease;
+}
+.btn.shutter:active:not(:disabled) span { transform: scale(.88); }
+.btn.shutter:disabled { opacity: .4; }
+
+@media (min-width: 900px) {
+  .actions .btn.shutter { min-width: 68px; }
+}

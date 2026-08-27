@@ -5,7 +5,8 @@ import { getDoc, newPage, putBlob, saveDoc } from '../lib/db';
 import { defaultQuad, detectDocumentQuad } from '../lib/detect';
 import { applyFilter } from '../lib/imaging';
 import { imageDataToBlob, imageDataToCanvas, loadScaled } from '../lib/image';
-import { capturePhoto, pickImages } from '../lib/platform';
+import { capturePhoto, isNative, pickImages } from '../lib/platform';
+import CameraCapture from './CameraCapture';
 import { warpQuad } from '../lib/warp';
 import { Busy, useToast } from './components';
 
@@ -56,7 +57,10 @@ export default function Scan() {
   const [source, setSource] = useState<ImageData | null>(null);
   const [queue, setQueue] = useState<Blob[]>([]);
   const [quad, setQuad] = useState<Quad | null>(null);
-  const [step, setStep] = useState<'crop' | 'filter'>('crop');
+  // Browsers open a live camera; the Android app defers to the platform one.
+  const [step, setStep] = useState<'camera' | 'crop' | 'filter'>(
+    isNative() ? 'crop' : 'camera',
+  );
   const [filter, setFilter] = useState<FilterId>('magic');
   const [preview, setPreview] = useState<ImageData | null>(null);
   const [warped, setWarped] = useState<ImageData | null>(null);
@@ -85,10 +89,11 @@ export default function Scan() {
     }
   }, []);
 
-  // Open the camera as soon as the screen appears, so scanning is one tap.
+  // On Android the system camera opens straight away, so scanning is one tap.
+  // In a browser the in-app camera is already on screen and waits for a shutter.
   const started = useRef(false);
   useEffect(() => {
-    if (started.current || !doc) return;
+    if (started.current || !doc || !isNative()) return;
     started.current = true;
     capturePhoto()
       .then((blob) => (blob ? beginPhoto(blob) : navigate(`/doc/${doc.id}`, { replace: true })))
@@ -98,6 +103,7 @@ export default function Scan() {
   // Paint whichever image the current step is showing.
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (step === 'camera') return;
     const image = step === 'crop' ? source : preview;
     if (!canvas || !image) return;
     canvas.width = image.width;
@@ -204,10 +210,15 @@ export default function Scan() {
       if (next) {
         setQueue(queue.slice(1));
         await beginPhoto(next);
-      } else {
+      } else if (isNative()) {
         const blobToScan = await capturePhoto();
         if (blobToScan) await beginPhoto(blobToScan);
         else navigate(`/doc/${updated.id}`, { replace: true });
+      } else {
+        setSource(null);
+        setWarped(null);
+        setPreview(null);
+        setStep('camera');
       }
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Could not save the page');
@@ -231,12 +242,23 @@ export default function Scan() {
         <button className="btn ghost icon" onClick={() => navigate(`/doc/${id}`)} aria-label="Back">
           ‹
         </button>
-        <h1>{step === 'crop' ? 'Adjust corners' : 'Choose a look'}</h1>
+        <h1>
+          {step === 'camera' ? 'Position the page' : step === 'crop' ? 'Adjust corners' : 'Choose a look'}
+        </h1>
         <span style={{ color: 'var(--muted)', fontSize: 13 }}>
           {doc ? `${doc.pages.length} saved` : ''}
         </span>
       </header>
 
+      {step === 'camera' && (
+        <CameraCapture
+          onCapture={beginPhoto}
+          onPickFile={importImages}
+          onCancel={() => navigate(`/doc/${id}`)}
+        />
+      )}
+
+      {step !== 'camera' && (
       <div
         className="stage"
         onPointerDown={onPointerDown}
@@ -273,6 +295,7 @@ export default function Scan() {
         )}
         {!showing && !busy && <div className="empty">Waiting for a photo…</div>}
       </div>
+      )}
 
       {step === 'filter' && (
         <div className="filter-strip">
@@ -289,6 +312,7 @@ export default function Scan() {
         </div>
       )}
 
+      {step !== 'camera' && (
       <div className="actions">
         {step === 'crop' ? (
           <>
@@ -320,6 +344,7 @@ export default function Scan() {
           </>
         )}
       </div>
+      )}
 
       {busy && <Busy label={busy} />}
       {toastNode}

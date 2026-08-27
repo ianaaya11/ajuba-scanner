@@ -9,7 +9,8 @@ account, no server, no upload.
 
 ## What it does
 
-**Scan** — take a photo, and the page boundary is found automatically with a
+**Scan** — a live camera with framing guides opens in the browser (the Android
+app uses the system camera). Take a photo and the page boundary is found automatically with a
 Sobel + Hough line detector. Drag any of the four corners to correct it, then a
 perspective warp flattens the page into a rectangle.
 
@@ -130,6 +131,11 @@ about 8 MB of WASM out of the bundle.
 - The service worker is registered only on the web. Inside the Android WebView
   it would serve stale assets after an app update.
 - Routing is hash-based so deep links survive the WebView's origin.
+- The browser camera needs a **secure context**: HTTPS or `localhost`. Opening
+  the dev server over a LAN IP such as `http://192.168.x.x:5180` leaves
+  `getUserMedia` undefined and the camera cannot start — the app says so and
+  offers importing instead. Use `vite --https`, a tunnel, or the deployed site
+  when testing on a phone.
 - All three LSTM Tesseract cores are bundled. Tesseract picks one at runtime
   from the device's SIMD support, and OCR fails to start on any device that
   picks a missing one.

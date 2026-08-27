@@ -51,7 +51,11 @@ const check = (name, ok, detail = '') => {
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: 'new',
-  args: ['--no-first-run', '--disable-background-networking', '--disable-component-update', '--disable-sync'],
+  args: [
+    '--no-first-run', '--disable-background-networking', '--disable-component-update', '--disable-sync',
+    // Synthetic webcam so the live camera and its shutter can be driven headlessly.
+    '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
+  ],
 });
 
 const page = await browser.newPage();
@@ -63,13 +67,45 @@ await cdp.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: DO
 
 await page.goto(BASE, { waitUntil: 'networkidle0' });
 
-// --- capture ---------------------------------------------------------------
+const clickText = (label) =>
+  page.evaluate((l) => {
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === l);
+    if (!btn) throw new Error(`no button labelled ${l}`);
+    btn.click();
+  }, label);
+
+// --- the live camera -------------------------------------------------------
+await clickText('New scan');
+await page.waitForSelector('video', { timeout: 20000 });
+await page.waitForFunction(() => {
+  const v = document.querySelector('video');
+  return v && v.videoWidth > 0 && !v.paused;
+}, { timeout: 20000 });
+const cam = await page.evaluate(() => {
+  const v = document.querySelector('video');
+  return { w: v.videoWidth, h: v.videoHeight };
+});
+check('live camera starts in the browser', cam.w > 0, `${cam.w}x${cam.h} stream`);
+
+// The shutter must yield a photo and move on to corner adjustment.
+await page.evaluate(() => document.querySelector('.btn.shutter').click());
+await page.waitForSelector('.stage svg polygon', { timeout: 30000 });
+check('shutter captures a frame and opens the crop step', true);
+
+// Back out and use the known test photo, so detection can be scored.
+await page.goto(BASE, { waitUntil: 'networkidle0' });
+await page.evaluate(() => new Promise((res) => {
+  const rq = indexedDB.deleteDatabase('recto');
+  rq.onsuccess = rq.onerror = rq.onblocked = () => res();
+}));
+await page.reload({ waitUntil: 'networkidle0' });
+
+// --- capture the reference photo -------------------------------------------
+await clickText('New scan');
+await page.waitForSelector('video', { timeout: 20000 });
 const [chooser] = await Promise.all([
   page.waitForFileChooser({ timeout: 15000 }),
-  page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'New scan');
-    btn.click();
-  }),
+  clickText('Import'),
 ]);
 await chooser.accept([PHOTO]);
 
@@ -104,9 +140,7 @@ console.log('  corner errors (px):', errors.map((e) => e.toFixed(1)).join(', '))
 check('page corners detected automatically', worst < 24, `worst error ${worst.toFixed(1)}px`);
 
 // --- crop + filters --------------------------------------------------------
-await page.evaluate(() => {
-  [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Crop').click();
-});
+await clickText('Crop');
 await page.waitForSelector('.filter-strip', { timeout: 30000 });
 await new Promise((r) => setTimeout(r, 900));
 await page.screenshot({ path: join(OUT, 'flow-2-filter-auto.png') });
@@ -135,9 +169,7 @@ await page.evaluate(() => {
 await new Promise((r) => setTimeout(r, 900));
 
 // --- save ------------------------------------------------------------------
-await page.evaluate(() => {
-  [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Done').click();
-});
+await clickText('Done');
 await page.waitForSelector('.page-grid', { timeout: 30000 });
 await new Promise((r) => setTimeout(r, 900));
 await page.screenshot({ path: join(OUT, 'flow-3-document.png') });
@@ -145,9 +177,7 @@ check('scanned page saved into the document',
   (await page.$$('.page-card')).length === 1, `${(await page.$$('.page-card')).length} page(s)`);
 
 // --- OCR -------------------------------------------------------------------
-await page.evaluate(() => {
-  [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'OCR').click();
-});
+await clickText('OCR');
 await page.waitForFunction(
   () => !document.querySelector('.overlay') && !!document.querySelector('.ocr-flag'),
   { timeout: 180000, polling: 1000 },
@@ -174,9 +204,7 @@ console.log(`  OCR text : ${JSON.stringify(ocr.text)}`);
 check('OCR found words with positions', ocr.words > 0, `${ocr.words} words`);
 
 // --- export ----------------------------------------------------------------
-await page.evaluate(() => {
-  [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Export PDF').click();
-});
+await clickText('Export PDF');
 let file = null;
 for (let i = 0; i < 60; i++) {
   const files = (await readdir(DOWNLOADS)).filter((f) => f.endsWith('.pdf'));

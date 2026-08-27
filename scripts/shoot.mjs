@@ -87,7 +87,11 @@ await mkdir(OUT, { recursive: true });
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: 'new',
-  args: ['--no-first-run', '--disable-background-networking', '--disable-component-update', '--disable-sync'],
+  args: [
+    '--no-first-run', '--disable-background-networking', '--disable-component-update', '--disable-sync',
+    // A synthetic webcam so the live camera screen can be exercised headlessly.
+    '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
+  ],
 });
 
 const page = await browser.newPage();
@@ -104,13 +108,30 @@ const screens = [
   ['document', `/doc/${ids[0]}`],
   ['page-editor', `/doc/${ids[0]}/page/page-blob-0`],
   ['page-rotated', `/doc/${ids[0]}/page/page-blob-1`],
+  ['camera', `/doc/${ids[0]}/scan`],
 ];
 
 for (const [name, route] of screens) {
   for (const [vpName, vp] of Object.entries(VIEWPORTS)) {
     await page.setViewport(vp);
     await page.goto(`${BASE}/#${route}`, { waitUntil: 'networkidle0' });
-    await new Promise((r) => setTimeout(r, 900));
+    await new Promise((r) => setTimeout(r, name === 'camera' ? 2500 : 900));
+    if (name === 'camera') {
+      const cam = await page.evaluate(() => {
+        const v = document.querySelector('video');
+        const g = document.querySelector('.camera-guide');
+        if (!v) return null;
+        const vb = v.getBoundingClientRect();
+        const gb = g?.getBoundingClientRect();
+        return {
+          w: v.videoWidth, h: v.videoHeight, playing: !v.paused && v.readyState >= 2,
+          // Guides must sit inside the picture, never over the letterbox bars.
+          guideInside: gb ? gb.left >= vb.left - 1 && gb.right <= vb.right + 1 &&
+                            gb.top >= vb.top - 1 && gb.bottom <= vb.bottom + 1 : false,
+        };
+      });
+      console.log(`         camera ${cam ? `${cam.w}x${cam.h} playing=${cam.playing} guides-on-picture=${cam.guideInside}` : 'NO VIDEO'}`);
+    }
     const metrics = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
