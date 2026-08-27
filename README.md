@@ -1,5 +1,8 @@
 # Recto
 
+**Live: https://ianaaya11.github.io/recto**
+
+
 A document scanner and PDF editor that runs in a desktop browser and as a native
 Android app from one TypeScript codebase. Nothing leaves the device — no
 account, no server, no upload.
@@ -27,6 +30,9 @@ pixels.
 **OCR** — Tesseract runs fully offline (the model ships with the app). Exported
 PDFs get a positioned invisible text layer, so the scan stays a scan but the
 text is searchable and selectable in any PDF reader.
+
+Open it in a browser and install it as a desktop app, or build the Android APK
+below. Pushing to `main` rebuilds and redeploys the site automatically.
 
 ## Running it
 
