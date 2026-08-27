@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   android: {
     // The scanner is portrait-first and the WebView keeps its own background.
-    backgroundColor: '#0b0f17',
+    backgroundColor: '#0a0c1a',
   },
 };
 

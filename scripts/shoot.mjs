@@ -9,6 +9,9 @@ const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const BASE = process.env.BASE ?? 'http://127.0.0.1:4191';
 const OUT = process.env.OUT ?? './shots';
 
+const SCHEME = process.env.SCHEME ?? 'light';
+const suffix = `-${SCHEME}`;
+
 const VIEWPORTS = {
   phone: { width: 412, height: 880, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
   desktop: { width: 1600, height: 1000, deviceScaleFactor: 1 },
@@ -95,6 +98,7 @@ const browser = await puppeteer.launch({
 });
 
 const page = await browser.newPage();
+await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: SCHEME }]);
 page.on('pageerror', (e) => console.log('  PAGE ERROR:', e.message));
 page.on('console', (m) => m.type() === 'error' && console.log('  CONSOLE ERROR:', m.text()));
 
@@ -115,6 +119,7 @@ for (const [name, route] of screens) {
   for (const [vpName, vp] of Object.entries(VIEWPORTS)) {
     await page.setViewport(vp);
     await page.goto(`${BASE}/#${route}`, { waitUntil: 'networkidle0' });
+
     await new Promise((r) => setTimeout(r, name === 'camera' ? 2500 : 900));
     if (name === 'camera') {
       const cam = await page.evaluate(() => {
@@ -141,7 +146,7 @@ for (const [name, route] of screens) {
     console.log(
       `${vpName.padEnd(8)} ${name.padEnd(12)} overflow=${overflow}px${overflow > 0 ? '  <-- OVERFLOWS' : ''}${metrics.stillLoading ? '  <-- STUCK LOADING' : ''}`,
     );
-    await page.screenshot({ path: `${OUT}/${name}-${vpName}.png` });
+    await page.screenshot({ path: `${OUT}/${name}-${vpName}${suffix}.png` });
 
     // The scan and page views must letterbox the page inside the stage; if the
     // image is taller than its container it is being cropped instead.

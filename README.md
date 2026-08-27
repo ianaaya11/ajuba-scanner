@@ -83,6 +83,23 @@ produces an unsigned release APK until you add one to `android/app/build.gradle`
 HTTPS (or localhost) and the browser offers to install it as a desktop app; the
 service worker caches the shell, and the OCR model is cached on first use.
 
+## Look
+
+Porcelain by day, midnight by night: the palette follows the device's
+`prefers-color-scheme`, and both halves share the same indigo-to-rose accent so
+the app reads as one identity rather than two. Every colour is a token on
+`:root`; no component rule knows which scheme is active.
+
+Surfaces are translucent with a hairline of light along the top edge, blurred
+where there is something behind them. Blur is deliberately kept off the page
+images so scans stay sharp.
+
+The mark — a page held in viewfinder brackets, crossed by the scan beam — lives
+in `scripts/logo.mjs`, and the favicon, PWA icons and Android launcher icons are
+all rendered from it, so they cannot drift apart. It also sits behind the
+library as an animated watermark, where the beam sweeps the page; that motion
+stops under `prefers-reduced-motion`.
+
 ## One UI, two form factors
 
 There is a single set of React components. The layout is mobile-first and CSS
@@ -114,7 +131,8 @@ src/
   ui/               Library, Scan, DocEditor, PageEditor
 scripts/
   fetch-ocr-assets.mjs   downloads the Tesseract model and core
-  make-icons.mjs         renders the app icon to PNG at every needed size
+  logo.mjs               the mark, as one canonical SVG
+  make-icons.mjs         rasterises it to every size the platforms need
   shoot.mjs              screenshots every screen at both viewports
   make-test-photo.mjs    renders a synthetic skewed, unevenly lit page photo
   e2e.mjs                runs the whole pipeline against it and checks the PDF

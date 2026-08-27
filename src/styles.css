@@ -6,37 +6,51 @@
    ============================================================ */
 
 :root {
-  /* Ground */
-  --bg: #070a12;
-  --bg-2: #0c1120;
+  /* Porcelain — the default. Paper ground, ink text, indigo to rose. */
+  --bg: #eef0f8;
+  --bg-2: #f8f9fd;
 
-  /* Glass: layered white at low alpha, not opaque panels */
-  --glass: rgba(255, 255, 255, .055);
-  --glass-strong: rgba(255, 255, 255, .085);
-  --glass-hi: rgba(255, 255, 255, .14);
-  --stroke: rgba(255, 255, 255, .10);
-  --stroke-hi: rgba(255, 255, 255, .18);
+  --glass: rgba(255, 255, 255, .62);
+  --glass-strong: rgba(255, 255, 255, .82);
+  --glass-hi: rgba(255, 255, 255, .9);
+  --stroke: rgba(23, 28, 48, .10);
+  --stroke-hi: rgba(23, 28, 48, .18);
 
-  /* Ink */
-  --text: #eef2fa;
-  --muted: #94a2bd;
+  --text: #171c30;
+  --muted: #6b7391;
 
-  /* Accent */
-  --accent: #5b8cff;
-  --accent-2: #8f6bff;
+  --accent: #6257f5;
+  --accent-2: #ef5da8;
   --accent-ink: #ffffff;
-  --danger: #ff6b74;
+  --danger: #e0405c;
+
+  --aur-1: rgba(98, 87, 245, .16);
+  --aur-2: rgba(239, 93, 168, .14);
+  --aur-3: rgba(52, 199, 235, .12);
+  --stage-bg: rgba(23, 28, 48, .07);
+  --thumb-bg: rgba(23, 28, 48, .06);
+  --field-bg: rgba(255, 255, 255, .75);
+  --tint: rgba(23, 28, 48, .04);
+  --tint-strong: rgba(255, 255, 255, .5);
+  --camera-bg: #d6dae8;
+  --glow: rgba(98, 87, 245, .45);
+  --glow-soft: rgba(98, 87, 245, .10);
+  --scrim: rgba(220, 224, 238, .65);
+  --sheen: rgba(255, 255, 255, .7);
+  --mark-opacity: .13;
+
+  --shadow: 0 14px 34px -18px rgba(23, 28, 48, .35);
+  --shadow-lg: 0 26px 60px -26px rgba(23, 28, 48, .45);
 
   --radius: 18px;
   --radius-sm: 12px;
   --blur: saturate(150%) blur(20px);
-  --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
-  --shadow-lg: 0 30px 70px -28px rgba(0, 0, 0, .9);
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  color-scheme: dark;
+  color-scheme: light;
 }
+
 
 * { box-sizing: border-box; }
 
@@ -53,9 +67,9 @@ body {
   /* Aurora wash: three soft pools of colour over a deep base. Fixed so it
      stays put while content scrolls above it. */
   background:
-    radial-gradient(1100px 700px at 12% -10%, rgba(91, 140, 255, .20), transparent 60%),
-    radial-gradient(900px 600px at 105% 8%, rgba(143, 107, 255, .16), transparent 58%),
-    radial-gradient(1000px 800px at 50% 115%, rgba(38, 190, 255, .10), transparent 60%),
+    radial-gradient(1100px 700px at 12% -10%, var(--aur-1), transparent 60%),
+    radial-gradient(900px 600px at 105% 8%, var(--aur-2), transparent 58%),
+    radial-gradient(1000px 800px at 50% 115%, var(--aur-3), transparent 60%),
     linear-gradient(180deg, var(--bg-2), var(--bg));
   background-attachment: fixed;
 }
@@ -157,7 +171,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent;
   color: var(--accent-ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 12px 30px -12px rgba(91, 140, 255, .8);
+  box-shadow: inset 0 1px 0 var(--sheen), 0 12px 30px -12px var(--glow);
 }
 
 .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; }
@@ -230,7 +244,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   height: 62px;
   border-radius: 9px;
   object-fit: cover;
-  background: rgba(0, 0, 0, .35);
+  background: var(--thumb-bg);
   border: 1px solid var(--stroke);
   flex: none;
 }
@@ -268,7 +282,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .page-card .shot {
   aspect-ratio: 3 / 4;
   width: 100%;
-  background: rgba(0, 0, 0, .38);
+  background: var(--thumb-bg);
   display: grid;
   place-items: center;
   border: none;
@@ -286,7 +300,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 2px;
   padding: 5px;
   border-top: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, .03);
+  background: var(--tint);
 }
 .page-card .num {
   font-size: 12px;
@@ -303,7 +317,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 2px 6px;
   margin-right: 2px;
   border-radius: 6px;
-  background: rgba(91, 140, 255, .16);
+  background: var(--glow-soft);
 }
 
 /* ---------- bottom action bar ---------- */
@@ -313,7 +327,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   gap: 12px;
   padding: 14px 16px calc(var(--safe-bottom) + 14px);
-  background: linear-gradient(180deg, rgba(10, 14, 26, 0), rgba(7, 10, 18, .82) 55%);
+  background: linear-gradient(180deg, transparent, var(--bg) 92%);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border-top: 1px solid var(--stroke);
@@ -333,7 +347,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   place-items: center;
-  background: rgba(0, 0, 0, .42);
+  background: var(--stage-bg);
   overflow: hidden;
   touch-action: none;
 }
@@ -356,7 +370,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 12px 16px;
   overflow-x: auto;
   border-top: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, .04);
+  background: var(--tint-strong);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
 }
@@ -377,7 +391,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent;
   color: var(--accent-ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 20px -10px rgba(91, 140, 255, .9);
+  box-shadow: inset 0 1px 0 var(--sheen), 0 8px 20px -10px var(--glow);
 }
 
 /* ---------- annotation toolbar ---------- */
@@ -387,7 +401,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 10px;
   padding: 12px 16px;
   border-top: 1px solid var(--stroke);
-  background: rgba(255, 255, 255, .04);
+  background: var(--tint-strong);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   overflow-x: auto;
@@ -410,7 +424,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 12, .6);
+  background: var(--scrim);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: grid;
@@ -441,7 +455,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .panel .row { display: flex; gap: 10px; }
 .panel textarea, .panel input[type='text'] {
   width: 100%;
-  background: rgba(0, 0, 0, .28);
+  background: var(--field-bg);
   border: 1px solid var(--stroke);
   border-radius: 14px;
   color: var(--text);
@@ -457,7 +471,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .progress {
   height: 5px;
-  background: rgba(0, 0, 0, .35);
+  background: var(--field-bg);
   border-radius: 999px;
   overflow: hidden;
   margin-top: 16px;
@@ -507,7 +521,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .ocr-text {
   white-space: pre-wrap;
-  background: rgba(0, 0, 0, .28);
+  background: var(--field-bg);
   border: 1px solid var(--stroke);
   border-radius: 14px;
   padding: 14px;
@@ -525,7 +539,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   z-index: 80;
   display: grid;
   place-items: center;
-  background: rgba(7, 10, 18, .8);
+  background: var(--scrim);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 2px dashed var(--accent);
@@ -547,7 +561,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   max-width: 100%;
   max-height: 100%;
   display: block;
-  background: #000;
+  background: var(--camera-bg);
   border-radius: 6px;
 }
 
@@ -611,30 +625,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
   width: min(70vw, 480px);
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(91, 140, 255, .09), transparent 70%);
+  background: radial-gradient(circle, var(--glow-soft), transparent 70%);
   animation: backdrop-glow 14s ease-in-out infinite;
 }
 
 .backdrop-mark {
-  width: min(58vw, 330px);
+  width: min(64vw, 360px);
   height: auto;
   /* Drawn as an outline rather than a filled sheet: a solid slab behind the
      list reads as a stray panel, a wireframe reads as a watermark. */
-  opacity: .16;
+  opacity: var(--mark-opacity);
   animation: backdrop-drift 18s ease-in-out infinite;
 }
 
-.backdrop-mark .sheet {
-  fill: rgba(255, 255, 255, .012);
-  stroke: var(--text);
-  stroke-width: 1.4;
-}
-.backdrop-mark .fold {
+/* Drawn as an outline: a filled sheet at watermark opacity reads as a stray
+   panel behind the list, a wireframe reads as a watermark. */
+.backdrop-mark .sheet { fill: none; stroke: var(--text); stroke-width: 1.6; }
+.backdrop-mark .fold { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.backdrop-mark .lines rect { fill: var(--text); opacity: .5; }
+.backdrop-mark .brackets {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 1.4;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.backdrop-mark .lines rect { fill: var(--text); opacity: .5; }
 
 .backdrop-mark .beam {
   /* Lifted above the sheet's own opacity so the pass stays visible. */
@@ -648,7 +663,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   0%        { transform: translateY(0); opacity: 0; }
   8%        { opacity: 1; }
   62%       { opacity: 1; }
-  70%, 100% { transform: translateY(146px); opacity: 0; }
+  70%, 100% { transform: translateY(86px); opacity: 0; }
 }
 
 @keyframes backdrop-drift {
@@ -715,6 +730,92 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .toast {
     animation: none;
   }
-  .backdrop-mark .beam { opacity: .5; transform: translateY(64px); }
+  .backdrop-mark .beam { opacity: .5; transform: translateY(42px); }
   .btn, .doc-row, .page-card, .chip, .swatch { transition: none; }
+}
+
+/* ============================================================
+   Dark scheme. Declared twice on purpose: the media query covers
+   the device setting, the attribute lets a build force one.
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+  /* Midnight — the same indigo and rose on an ink ground, so the brand reads
+     as one identity in either scheme rather than two different apps. */
+  --bg: #0a0c1a;
+  --bg-2: #12142a;
+
+  --glass: rgba(255, 255, 255, .055);
+  --glass-strong: rgba(255, 255, 255, .09);
+  --glass-hi: rgba(255, 255, 255, .14);
+  --stroke: rgba(255, 255, 255, .10);
+  --stroke-hi: rgba(255, 255, 255, .18);
+
+  --text: #edeffb;
+  --muted: #9299bd;
+
+  --accent: #7b74ff;
+  --accent-2: #ff6fb1;
+  --accent-ink: #ffffff;
+  --danger: #ff6b83;
+
+  --aur-1: rgba(123, 116, 255, .22);
+  --aur-2: rgba(255, 111, 177, .16);
+  --aur-3: rgba(64, 196, 255, .10);
+  --stage-bg: rgba(0, 0, 0, .45);
+  --thumb-bg: rgba(0, 0, 0, .4);
+  --field-bg: rgba(0, 0, 0, .3);
+  --tint: rgba(255, 255, 255, .03);
+  --tint-strong: rgba(255, 255, 255, .04);
+  --camera-bg: #000000;
+  --glow: rgba(123, 116, 255, .8);
+  --glow-soft: rgba(123, 116, 255, .13);
+  --scrim: rgba(6, 8, 18, .62);
+  --sheen: rgba(255, 255, 255, .28);
+  --mark-opacity: .17;
+
+  --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
+  --shadow-lg: 0 30px 70px -28px rgba(0, 0, 0, .9);
+  color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  /* Midnight — the same indigo and rose on an ink ground, so the brand reads
+     as one identity in either scheme rather than two different apps. */
+  --bg: #0a0c1a;
+  --bg-2: #12142a;
+
+  --glass: rgba(255, 255, 255, .055);
+  --glass-strong: rgba(255, 255, 255, .09);
+  --glass-hi: rgba(255, 255, 255, .14);
+  --stroke: rgba(255, 255, 255, .10);
+  --stroke-hi: rgba(255, 255, 255, .18);
+
+  --text: #edeffb;
+  --muted: #9299bd;
+
+  --accent: #7b74ff;
+  --accent-2: #ff6fb1;
+  --accent-ink: #ffffff;
+  --danger: #ff6b83;
+
+  --aur-1: rgba(123, 116, 255, .22);
+  --aur-2: rgba(255, 111, 177, .16);
+  --aur-3: rgba(64, 196, 255, .10);
+  --stage-bg: rgba(0, 0, 0, .45);
+  --thumb-bg: rgba(0, 0, 0, .4);
+  --field-bg: rgba(0, 0, 0, .3);
+  --tint: rgba(255, 255, 255, .03);
+  --tint-strong: rgba(255, 255, 255, .04);
+  --camera-bg: #000000;
+  --glow: rgba(123, 116, 255, .8);
+  --glow-soft: rgba(123, 116, 255, .13);
+  --scrim: rgba(6, 8, 18, .62);
+  --sheen: rgba(255, 255, 255, .28);
+  --mark-opacity: .17;
+
+  --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
+  --shadow-lg: 0 30px 70px -28px rgba(0, 0, 0, .9);
+  color-scheme: dark;
 }
