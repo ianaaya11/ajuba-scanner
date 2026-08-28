@@ -631,7 +631,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 .backdrop-mark {
-  width: min(64vw, 360px);
+  width: min(96vw, 540px);
   height: auto;
   /* Drawn as an outline rather than a filled sheet: a solid slab behind the
      list reads as a stray panel, a wireframe reads as a watermark. */
