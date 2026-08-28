@@ -84,8 +84,25 @@ most of it the OCR model). Install it with
 `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`, or open the
 project in Android Studio with `npm run android:open`.
 
-For a Play Store build you need a signing key — `npm run android:release`
-produces an unsigned release APK until you add one to `android/app/build.gradle`.
+### Publishing to the Play Store
+
+`npm run assets:play` builds the listing assets into `brand/play-store/`:
+
+| File | Size | Notes |
+| --- | --- | --- |
+| `icon-512.png` | 512x512 | Opaque, no alpha, no pre-applied rounding |
+| `feature-graphic-1024x500.png` | 1024x500 | Exact size required |
+| `screenshot-*.png` | 1080x1920 | Real screens. 1080x1920 is inside Play's 2:1 aspect limit; the app's own 412-wide captures are 1:2.14 and would be rejected |
+
+`npm run android:bundle` produces `app-release.aab`. Play requires an app
+bundle, not an APK, for a new app.
+
+**Still needed, and not doable from here:** an upload keystore, a signing config
+that reads it, and an interactive Play Console session. The bundle above is
+unsigned and Play will reject it as-is. Generate a key with `keytool -genkeypair
+-v -keystore upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`,
+keep it out of the repo, and back it up — losing it means never being able to
+update the listing.
 
 ### Desktop
 

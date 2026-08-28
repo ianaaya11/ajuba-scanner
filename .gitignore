@@ -36,3 +36,8 @@ android/app/src/main/assets/capacitor.config.json
 
 # Screenshot output from scripts/shoot.mjs
 shots/
+
+# Signing material must never be committed
+*.jks
+*.keystore
+android/keystore.properties

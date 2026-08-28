@@ -19,7 +19,9 @@
     "android:open": "npx cap open android",
     "shots": "node scripts/shoot.mjs",
     "e2e": "node scripts/make-test-photo.mjs && node scripts/e2e.mjs",
-    "photo": "node scripts/make-test-photo.mjs"
+    "photo": "node scripts/make-test-photo.mjs",
+    "assets:play": "node scripts/play-assets.mjs",
+    "android:bundle": "cd android && JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home} ./gradlew :app:bundleRelease"
   },
   "dependencies": {
     "@capacitor/camera": "^8.2.3",
