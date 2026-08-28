@@ -104,9 +104,14 @@ Surfaces are translucent with a hairline of light along the top edge, blurred
 where there is something behind them. Blur is deliberately kept off the page
 images so scans stay sharp.
 
-The mark — a portrait on the page being scanned, held in viewfinder brackets
-and crossed by the beam — lives in `scripts/logo.mjs`. The favicon, PWA icons
-and Android launcher icons all render from it, so they cannot drift apart. The
+Two marks, both in `scripts/logo.mjs`, so nothing can drift apart:
+
+- **page** — the contour portrait on a document page, held in viewfinder
+  brackets and crossed by the beam. Used for the web build (favicon and PWA
+  icons) and mirrored by the animated watermark.
+- **badge** — the embossed portrait in a ring. Used for the Android launcher
+  and the Play Store listing, where the icon is seen large and on its own and
+  the relief reads as a struck seal. The
 same mark sits behind the library as a greyscale watermark with the beam
 sweeping the page; that motion stops under `prefers-reduced-motion`.
 
@@ -118,9 +123,15 @@ crops to head and shoulders and thickens the ink so it survives being shrunk to
 repo; the source photograph is not:
 
 ```bash
-node scripts/make-contour.mjs /path/to/photo.jpg   # -> brand/contour.png
+node scripts/make-contour.mjs  /path/to/photo.jpg  # -> brand/contour.png   (web)
+node scripts/make-portrait.mjs /path/to/photo.jpg  # -> embossed badge      (app)
 npm run assets:icons                               # re-render every icon
 ```
+
+`npm run assets:icons` also writes `brand/play-store-icon.png`: 512 square,
+full bleed and opaque, with no alpha channel and no pre-applied rounding, which
+is what the Play Console expects — it applies its own masking, so a
+pre-rounded icon shows corner artefacts.
 
 ## One UI, two form factors
 
