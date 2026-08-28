@@ -39,6 +39,9 @@
   --sheen: rgba(255, 255, 255, .7);
   --panel-bg: rgba(255, 255, 255, .93);
   --mark-opacity: .12;
+  --grid-line: rgba(23, 28, 48, .055);
+  --grain: .035;
+  --ghost: rgba(23, 28, 48, .10);
   --mark-invert: invert(0);
 
   --shadow: 0 14px 34px -18px rgba(23, 28, 48, .35);
@@ -737,6 +740,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
      preference; see src/ui/Backdrop.tsx. */
   .backdrop-mark,
   .backdrop::after,
+  .sheet-ghost,
   .toast {
     animation: none;
   }
@@ -784,6 +788,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   --panel-bg: linear-gradient(180deg, rgba(38, 42, 74, .92), rgba(24, 27, 52, .92));
   /* Dark needs a touch more, since light ink on a dark ground reads fainter. */
   --mark-opacity: .2;
+  --grid-line: rgba(255, 255, 255, .045);
+  --grain: .05;
+  --ghost: rgba(255, 255, 255, .09);
   --mark-invert: invert(1);
 
   --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
@@ -828,6 +835,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   --panel-bg: linear-gradient(180deg, rgba(38, 42, 74, .92), rgba(24, 27, 52, .92));
   /* Dark needs a touch more, since light ink on a dark ground reads fainter. */
   --mark-opacity: .2;
+  --grid-line: rgba(255, 255, 255, .045);
+  --grain: .05;
+  --ghost: rgba(255, 255, 255, .09);
   --mark-invert: invert(1);
 
   --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
@@ -931,4 +941,93 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .install-btn { gap: 6px; }
 @media (max-width: 460px) {
   .install-label { display: none; }
+}
+
+/* ---------- background texture ----------
+   Three layers behind everything: ruled paper, a little grain, and sheets
+   adrift. All are decoration, so they sit under the content and take no
+   pointer events. */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  /* Ruled squares, like the paper the app exists to photograph. */
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 46px 46px;
+
+  /* Fade the ruling out towards the edges so it never ends on a hard line. */
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 35%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(120% 90% at 50% 35%, #000 30%, transparent 78%);
+}
+
+/* Grain, from an inline SVG turbulence: no request, and it keeps the large
+   flat gradients from banding on cheaper screens. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.drift {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sheet-ghost {
+  /* Spans are inline by default, where width and aspect-ratio do not apply —
+     the border then collapses into a stray diagonal line. */
+  display: block;
+  position: absolute;
+  border: 1.5px solid var(--ghost);
+  border-radius: 14px;
+  /* A4-ish, so they read as paper rather than as boxes. */
+  aspect-ratio: 1 / 1.414;
+}
+
+/* Kept small and fully inside the frame. Larger sheets run their edges clear
+   across the composition and their corners fall outside it, so they read as
+   stray lines rather than as paper. */
+.sheet-ghost.s1 {
+  width: 116px;
+  top: 15%;
+  right: 9%;
+  animation: drift-a 42s ease-in-out infinite;
+}
+.sheet-ghost.s2 {
+  width: 142px;
+  bottom: 11%;
+  left: 7%;
+  animation: drift-b 55s ease-in-out infinite;
+}
+.sheet-ghost.s3 {
+  width: 84px;
+  bottom: 28%;
+  right: 13%;
+  animation: drift-c 36s ease-in-out infinite;
+}
+
+/* Different periods and distances, so they never line up into a pattern. */
+@keyframes drift-a {
+  0%, 100% { transform: translate(0, 0) rotate(-12deg); }
+  50%      { transform: translate(26px, -34px) rotate(-6deg); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate(0, 0) rotate(14deg); }
+  50%      { transform: translate(-32px, 26px) rotate(8deg); }
+}
+@keyframes drift-c {
+  0%, 100% { transform: translate(0, 0) rotate(6deg); }
+  50%      { transform: translate(18px, 30px) rotate(-4deg); }
 }

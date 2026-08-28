@@ -38,6 +38,14 @@ export default function Backdrop() {
 
   return (
     <div className="backdrop" aria-hidden="true">
+      {/* Sheets adrift far behind the mark, at three depths. Nothing here is
+          load-bearing; it stops the page reading as flat colour. */}
+      <div className="drift">
+        <span className="sheet-ghost s1" />
+        <span className="sheet-ghost s2" />
+        <span className="sheet-ghost s3" />
+      </div>
+
       <svg viewBox="0 0 128 128" className="backdrop-mark">
         <defs>
           {/* Soft falloff so the beam reads as light, not a drawn bar. */}

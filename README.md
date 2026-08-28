@@ -169,6 +169,12 @@ auto, light and dark; auto follows the device's `prefers-color-scheme`, and both
 the app reads as one identity rather than two. Every colour is a token on
 `:root`; no component rule knows which scheme is active.
 
+Behind everything sit three decorative layers: faint ruled squares, like the
+paper the app exists to photograph, masked so the ruling never ends on a hard
+line; a little grain from an inline SVG turbulence, which also keeps the large
+flat gradients from banding on cheaper screens; and a few sheets adrift at
+different depths. All of it is inert — under the content, no pointer events.
+
 Surfaces are translucent with a hairline of light along the top edge, blurred
 where there is something behind them. Blur is deliberately kept off the page
 images so scans stay sharp.
