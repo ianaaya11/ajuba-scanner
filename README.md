@@ -117,6 +117,18 @@ under this listing.
 **Still not doable from here:** the upload itself. It needs an interactive Play
 Console session under your developer account.
 
+### Installing it
+
+The app is installable from the live link on any platform. Where the browser
+supports it — Chrome and Edge, on Android and desktop — an **Install** button
+appears in the header and opens the system dialog in one tap; Android turns it
+into a WebAPK with its own icon, no browser bars and its own entry in the app
+switcher. The button only shows when the browser has confirmed the app is
+installable, and disappears once it is.
+
+Safari has no equivalent API, so the same button explains the Share → Add to
+Home Screen route instead.
+
 ### iPhone and iPad
 
 Two ways, both working:

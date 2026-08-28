@@ -926,3 +926,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .selection-hint { display: none; }
   .selection-name { margin-right: auto; }
 }
+
+/* The install offer only appears when it can actually do something. */
+.install-btn { gap: 6px; }
+@media (max-width: 460px) {
+  .install-label { display: none; }
+}

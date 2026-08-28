@@ -7,6 +7,7 @@ import { isPdf, pdfToCanvases, pickDocuments } from '../lib/pdfImport';
 import { isNative } from '../lib/platform';
 import Backdrop from './Backdrop';
 import ThemeToggle from './ThemeToggle';
+import InstallButton from './InstallButton';
 import { Busy, Confirm, relativeDate, useToast } from './components';
 import { useBlobUrl } from './hooks';
 
@@ -127,6 +128,7 @@ export default function Library() {
 
       <header className="bar">
         <h1 className="wordmark">ajuba scanner</h1>
+        <InstallButton />
         <ThemeToggle />
       </header>
 
