@@ -97,12 +97,25 @@ project in Android Studio with `npm run android:open`.
 `npm run android:bundle` produces `app-release.aab`. Play requires an app
 bundle, not an APK, for a new app.
 
-**Still needed, and not doable from here:** an upload keystore, a signing config
-that reads it, and an interactive Play Console session. The bundle above is
-unsigned and Play will reject it as-is. Generate a key with `keytool -genkeypair
--v -keystore upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`,
-keep it out of the repo, and back it up — losing it means never being able to
-update the listing.
+To sign it, copy `android/keystore.properties.example` to
+`android/keystore.properties` and create a key:
+
+```bash
+cd android/app
+keytool -genkeypair -v -keystore upload.jks -alias upload \
+        -keyalg RSA -keysize 2048 -validity 10000
+```
+
+`keytool` prompts for the passwords, so they stay with you. The build reads
+that file if it is present and signs the release; without it the release stays
+unsigned and everything else still builds, so a fresh clone needs no setup.
+Both the key and the properties file are git ignored.
+
+Back the key up off this machine. Losing it means the app can never be updated
+under this listing.
+
+**Still not doable from here:** the upload itself. It needs an interactive Play
+Console session under your developer account.
 
 ### Desktop
 
