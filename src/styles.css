@@ -733,13 +733,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Respect a stated preference for less motion: keep the mark, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
+  /* The sweep itself is SMIL and is not rendered at all under this
+     preference; see src/ui/Backdrop.tsx. */
   .backdrop-mark,
-  .backdrop-mark .beam,
   .backdrop::after,
   .toast {
     animation: none;
   }
-  .backdrop-mark .beam { opacity: .5; transform: translateY(42px); }
   .btn, .doc-row, .page-card, .chip, .swatch { transition: none; }
 }
 
