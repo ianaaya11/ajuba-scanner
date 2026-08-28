@@ -24,6 +24,10 @@ const targets = [
   // Maskable icons are cropped to a circle on some launchers; keep the mark
   // inside the safe zone so the brackets are never clipped.
   ['public/icons/maskable-512.png', 512, { ...web, inset: 0.22 }],
+  // iOS ignores the manifest icons for Add to Home Screen and uses
+  // apple-touch-icon, whose native size is 180. It also composites onto white,
+  // so this one is drawn opaque rather than with a transparent surround.
+  ['public/icons/apple-touch-icon-180.png', 180, { ...web, opaque: true }],
 
   // Android launcher, per density.
   ['android/app/src/main/res/mipmap-mdpi/ic_launcher.png', 48, app],

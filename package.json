@@ -21,7 +21,10 @@
     "e2e": "node scripts/make-test-photo.mjs && node scripts/e2e.mjs",
     "photo": "node scripts/make-test-photo.mjs",
     "assets:play": "node scripts/play-assets.mjs",
-    "android:bundle": "cd android && JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home} ./gradlew :app:bundleRelease"
+    "android:bundle": "cd android && JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home} ./gradlew :app:bundleRelease",
+    "ios": "npm run build && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:simulator": "npm run build && npx cap sync ios && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath /tmp/ajuba-ios-build build"
   },
   "dependencies": {
     "@capacitor/camera": "^8.2.3",
@@ -40,6 +43,7 @@
   "devDependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.3",

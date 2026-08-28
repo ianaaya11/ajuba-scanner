@@ -41,3 +41,12 @@ shots/
 *.jks
 *.keystore
 android/keystore.properties
+
+# iOS build output
+ios/App/build/
+ios/App/App/public/
+ios/App/Pods/
+ios/App/output/
+ios/App/*.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/DerivedData/

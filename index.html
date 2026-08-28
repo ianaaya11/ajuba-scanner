@@ -9,7 +9,11 @@
     <meta name="theme-color" content="#f8f9fd" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0c1a" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180.png" />
+    <!-- iOS 16.3 and earlier ignore the manifest's display mode. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="ajuba" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>ajuba scanner</title>
     <script>
       // Applied before first paint so a forced theme does not flash the other one.

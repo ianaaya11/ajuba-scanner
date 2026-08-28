@@ -117,6 +117,33 @@ under this listing.
 **Still not doable from here:** the upload itself. It needs an interactive Play
 Console session under your developer account.
 
+### iPhone and iPad
+
+Two ways, both working:
+
+**From the web.** Open the live link in Safari, then Share → Add to Home Screen.
+It installs as a standalone app with its own icon. iOS ignores the manifest's
+icons for this and uses `apple-touch-icon`, so a 180x180 opaque one is
+generated alongside the PWA icons.
+
+Worth knowing: Safari caps script-writable storage for ordinary websites that
+go unvisited, so scans held only in a browser tab can be evicted. Web apps
+added to the Home Screen are not subject to that cap, so install it rather than
+leaving it as a tab — or use the native build below — if the scans matter.
+
+**As a native app.** The iOS platform is in `ios/`, built with Swift Package
+Manager rather than CocoaPods.
+
+```bash
+npm run ios:simulator   # build and run on a simulator, no Apple account needed
+npm run ios:open        # open in Xcode to run on a real device
+```
+
+Running on your own iPhone needs a free personal team in Xcode; the App Store
+needs a paid Apple Developer account. `Info.plist` carries
+`NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` — iOS terminates
+the app the moment it touches the camera without them.
+
 ### Desktop
 
 `npm run build` produces a static, installable PWA in `dist/`. Serve it over
