@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { Doc, Page } from '../types';
-import { deleteBlobs, emptyDoc, getDoc, saveDoc } from '../lib/db';
+import { deleteBlobs, deleteDoc, emptyDoc, getDoc, saveDoc } from '../lib/db';
 import { buildPdf, pdfFilename, renderPageCanvas } from '../lib/pdf';
 import { recognise } from '../lib/ocr';
 import { exportPdf } from '../lib/platform';
@@ -67,6 +67,7 @@ export default function DocEditor() {
   const [doc, setDoc] = useState<Doc | null>(null);
   const [busy, setBusy] = useState<{ label: string; ratio?: number } | null>(null);
   const [confirming, setConfirming] = useState<Page | null>(null);
+  const [deletingDoc, setDeletingDoc] = useState(false);
   const [splitting, setSplitting] = useState(false);
 
   const load = useCallback(() => {
@@ -190,6 +191,14 @@ export default function DocEditor() {
         >
           Split
         </button>
+        <button
+          className="btn sm ghost danger"
+          onClick={() => setDeletingDoc(true)}
+          aria-label="Delete this document"
+          title="Delete this document"
+        >
+          Delete
+        </button>
       </header>
 
       <div className="body">
@@ -236,6 +245,19 @@ export default function DocEditor() {
           title="Delete this page?"
           onCancel={() => setConfirming(null)}
           onConfirm={() => removePage(confirming)}
+        />
+      )}
+
+      {deletingDoc && (
+        <Confirm
+          title={`Delete “${doc.name}”?`}
+          detail={`This removes the document and all ${doc.pages.length} page${doc.pages.length === 1 ? '' : 's'} from this device. Export it first if you want to keep a copy.`}
+          confirmLabel="Delete document"
+          onCancel={() => setDeletingDoc(false)}
+          onConfirm={async () => {
+            await deleteDoc(doc.id);
+            navigate('/', { replace: true });
+          }}
         />
       )}
 

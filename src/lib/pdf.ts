@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import type { Annotation, Doc, Page } from '../types';
-import { displaySize, isStroke, rotatePoint } from './annotations';
+import { displaySize, isStroke, rotatePoint, signaturePolylines } from './annotations';
 import { blobToImageData, canvasToBlob, imageDataToCanvas, rotateCanvas } from './image';
 import { getBlob } from './db';
 
@@ -53,6 +53,25 @@ function drawAnnotations(
       }
       for (let i = 1; i < points.length; i++) {
         pdfPage.drawLine({ start: points[i - 1], end: points[i], ...options });
+      }
+    } else if (a.kind === 'signature') {
+      // Signatures export as vectors like any other ink, so they stay crisp at
+      // any zoom rather than being stamped in as pixels.
+      const { lines, strokeWidth } = signaturePolylines(a, page.width, page.height);
+      for (const line of lines) {
+        const points = line.map((p) => {
+          const r = rotatePoint(p, page.rotation);
+          return { x: r.x * pw, y: ph - r.y * ph };
+        });
+        for (let i = 1; i < points.length; i++) {
+          pdfPage.drawLine({
+            start: points[i - 1],
+            end: points[i],
+            thickness: Math.max(0.4, strokeWidth * pxToPdf),
+            color: hexToRgb(a.color),
+            lineCap: 1 as const,
+          });
+        }
       }
     } else {
       const r = rotatePoint(a.at, page.rotation);

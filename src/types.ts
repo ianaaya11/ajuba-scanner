@@ -25,7 +25,30 @@ export interface TextNote {
   text: string;
 }
 
-export type Annotation = Stroke | TextNote;
+/** A rectangle in normalised, unrotated page coordinates. */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * A signature dropped into an area the user marked out. The strokes are stored
+ * in 0..1 of the signature's own bounding box together with its natural aspect
+ * ratio, so it can be fitted into any box later without being squashed.
+ */
+export interface Signature {
+  kind: 'signature';
+  color: string;
+  box: Box;
+  aspect: number;
+  /** Stroke thickness as a fraction of the fitted signature's height. */
+  width: number;
+  strokes: Point[][];
+}
+
+export type Annotation = Stroke | TextNote | Signature;
 
 /** One OCR word with its box in unrotated, normalised page coordinates. */
 export interface OcrWord {

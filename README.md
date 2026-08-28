@@ -19,11 +19,18 @@ reads like a flatbed scan), B&W (Sauvola adaptive threshold, so a shadowed page
 still binarises correctly), Greyscale, Colour, and Original.
 
 **Edit pages** — reorder, rotate, delete, split a document in two, merge fresh
-scans with pages imported from an existing PDF. On desktop you can drag PDFs and
+scans with pages imported from an existing PDF. Delete a whole document from
+the library list or from inside the document itself. On desktop you can drag PDFs and
 images straight onto the window to import them.
 
-**Annotate** — pen, highlighter, and text notes (keyboard: `p` `h` `t` `v` to
-switch tool, arrow keys to change page, Cmd/Ctrl+Z to undo). Marks are stored as vectors in
+**Annotate and sign** — pen, highlighter, text notes, signatures and date
+stamps. To sign, pick the Sign tool and drag out the area to sign in; the
+signature is drawn on a pad and fitted into that area preserving its aspect
+ratio, and can be remembered on the device for reuse. The Date tool drops a
+formatted date, or any text you prefer, wherever you tap. Everything exports as
+real PDF vectors and text rather than flattened pixels, so a signed page stays
+crisp and the date stays selectable. (Keyboard: `p` `h` `t` `s` `d` `v` to
+switch tool, arrow keys to change page, Cmd/Ctrl+Z to undo.) Marks are stored as vectors in
 unrotated page space, so rotating a page never disturbs what is on it, and they
 are drawn into the exported PDF as real vector content rather than flattened
 pixels.

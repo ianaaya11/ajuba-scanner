@@ -115,6 +115,22 @@ const screens = [
   ['camera', `/doc/${ids[0]}/scan`],
 ];
 
+/** Marks out an area with the Sign tool so the pad can be captured. */
+async function openSignPad() {
+  await page.evaluate(() => {
+    [...document.querySelectorAll('.chip')].find((c) => c.textContent.trim() === 'Sign').click();
+  });
+  const b = await page.evaluate(() => {
+    const r = document.querySelector('.stage canvas').getBoundingClientRect();
+    return { x: r.x, y: r.y, w: r.width, h: r.height };
+  });
+  await page.mouse.move(b.x + b.w * 0.12, b.y + b.h * 0.72);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.w * 0.55, b.y + b.h * 0.86, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForSelector('.sign-pad', { timeout: 10000 });
+}
+
 for (const [name, route] of screens) {
   for (const [vpName, vp] of Object.entries(VIEWPORTS)) {
     await page.setViewport(vp);
@@ -147,6 +163,13 @@ for (const [name, route] of screens) {
       `${vpName.padEnd(8)} ${name.padEnd(12)} overflow=${overflow}px${overflow > 0 ? '  <-- OVERFLOWS' : ''}${metrics.stillLoading ? '  <-- STUCK LOADING' : ''}`,
     );
     await page.screenshot({ path: `${OUT}/${name}-${vpName}${suffix}.png` });
+
+    if (name === 'page-editor') {
+      await openSignPad();
+      await new Promise((r) => setTimeout(r, 400));
+      await page.screenshot({ path: `${OUT}/signpad-${vpName}${suffix}.png` });
+      await page.keyboard.press('Escape');
+    }
 
     // The scan and page views must letterbox the page inside the stage; if the
     // image is taller than its container it is being cropped instead.

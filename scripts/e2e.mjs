@@ -12,6 +12,20 @@ import { PDFDocument } from 'pdf-lib';
 globalThis.DOMMatrix ??= class { multiply() { return this; } };
 const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
+/**
+ * Counts vector paths, which is how signature ink is written.
+ *
+ * Note pdf.js folds the paint operator into `constructPath`, so a bare
+ * `OPS.stroke` never appears and counting it would always read zero.
+ */
+async function countVectorPaths(bytes) {
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const ops = await (await doc.getPage(1)).getOperatorList();
+  const n = ops.fnArray.filter((fn) => fn === pdfjs.OPS.constructPath).length;
+  await doc.destroy();
+  return n;
+}
+
 /** Pulls the text layer out of a PDF exactly as a reader's search would. */
 async function extractText(bytes) {
   const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: false }).promise;
@@ -203,6 +217,98 @@ console.log(`  OCR words: ${ocr.words}`);
 console.log(`  OCR text : ${JSON.stringify(ocr.text)}`);
 check('OCR found words with positions', ocr.words > 0, `${ocr.words} words`);
 
+// --- sign and date ---------------------------------------------------------
+await page.evaluate(() => document.querySelector('.page-card .shot').click());
+await page.waitForSelector('.tool-bar', { timeout: 20000 });
+await new Promise((r) => setTimeout(r, 700));
+
+const clickChip = (label) =>
+  page.evaluate((l) => {
+    const c = [...document.querySelectorAll('.chip')].find((x) => x.textContent.trim() === l);
+    if (!c) throw new Error(`no chip ${l}`);
+    c.click();
+  }, label);
+
+/** Drags a rectangle across the page, as a finger marking out an area would. */
+async function dragBox(fromFrac, toFrac) {
+  const box = await page.evaluate(() => {
+    const c = document.querySelector('.stage canvas');
+    const b = c.getBoundingClientRect();
+    return { x: b.x, y: b.y, w: b.width, h: b.height };
+  });
+  const at = (f) => ({ x: box.x + box.w * f.x, y: box.y + box.h * f.y });
+  const a = at(fromFrac);
+  const b = at(toFrac);
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  await page.mouse.move((a.x + b.x) / 2, (a.y + b.y) / 2, { steps: 6 });
+  await page.mouse.move(b.x, b.y, { steps: 6 });
+  await page.mouse.up();
+}
+
+await clickChip('Sign');
+await dragBox({ x: 0.12, y: 0.74 }, { x: 0.52, y: 0.86 });
+await page.waitForSelector('.sign-pad', { timeout: 15000 });
+check('marking an area opens the signature pad', true);
+
+// Scribble something signature-shaped on the pad.
+const pad = await page.evaluate(() => {
+  const b = document.querySelector('.sign-pad').getBoundingClientRect();
+  return { x: b.x, y: b.y, w: b.width, h: b.height };
+});
+await page.mouse.move(pad.x + pad.w * 0.15, pad.y + pad.h * 0.6);
+await page.mouse.down();
+for (const [fx, fy] of [[0.3, 0.3], [0.42, 0.7], [0.55, 0.32], [0.7, 0.66], [0.85, 0.45]]) {
+  await page.mouse.move(pad.x + pad.w * fx, pad.y + pad.h * fy, { steps: 4 });
+}
+await page.mouse.up();
+await clickText('Place');
+await page.waitForFunction(() => !document.querySelector('.sign-pad'), { timeout: 10000 });
+
+await new Promise((r) => setTimeout(r, 900));
+const sigState = await page.evaluate(async () => {
+  const db = await new Promise((res, rej) => {
+    const r = indexedDB.open('ajuba-scanner');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+  const docs = await new Promise((res, rej) => {
+    const t = db.transaction('docs').objectStore('docs').getAll();
+    t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error);
+  });
+  const pg = docs.flatMap((d) => d.pages)[0];
+  return {
+    polylines: document.querySelectorAll('.stage svg polyline').length,
+    kinds: (pg?.annotations ?? []).map((a) => a.kind),
+    padOpen: !!document.querySelector('.sign-pad'),
+  };
+});
+console.log(`  stored annotations: [${sigState.kinds.join(', ')}]  padOpen=${sigState.padOpen}`);
+check('signature is drawn onto the page', sigState.polylines > 0, `${sigState.polylines} polylines`);
+
+await clickChip('Date');
+await page.evaluate(() => {
+  const c = document.querySelector('.stage canvas').getBoundingClientRect();
+  document.elementFromPoint(c.x + c.width * 0.62, c.y + c.height * 0.79);
+});
+const stageBox = await page.evaluate(() => {
+  const b = document.querySelector('.stage canvas').getBoundingClientRect();
+  return { x: b.x, y: b.y, w: b.width, h: b.height };
+});
+await page.mouse.click(stageBox.x + stageBox.w * 0.62, stageBox.y + stageBox.h * 0.79);
+await page.waitForSelector('.date-input', { timeout: 15000 });
+const dateText = await page.evaluate(() => {
+  const chip = document.querySelector('.format-list .chip');
+  chip.click();
+  return chip.textContent.trim();
+});
+await clickText('Place');
+await page.waitForFunction(() => !document.querySelector('.date-input'), { timeout: 10000 });
+check('date stamp placed', true, dateText);
+
+await page.evaluate(() => history.back());
+await page.waitForSelector('.page-grid', { timeout: 20000 });
+await new Promise((r) => setTimeout(r, 600));
+
 // --- export ----------------------------------------------------------------
 await clickText('Export PDF');
 let file = null;
@@ -226,6 +332,13 @@ if (file) {
   console.log(`  sample: ${JSON.stringify(extracted.slice(0, 90))}`);
   check('PDF text layer is searchable', /rental|agreement|tenant/i.test(extracted),
     `${words.length} words recovered`);
+  // The date is drawn as real text, so it must come back out of the PDF.
+  check('date stamp survives into the PDF', extracted.includes(dateText), dateText);
+
+  // The scan itself is an image plus invisible text, so any stroke in the
+  // content stream is signature ink and nothing else.
+  const paths = await countVectorPaths(bytes);
+  check('signature is written into the PDF as vectors', paths > 0, `${paths} vector paths`);
   console.log(`  exported ${file} (${(bytes.length / 1024).toFixed(0)} KB, ${pdf.getPageCount()} page)`);
 }
 

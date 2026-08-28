@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Annotation, Doc, Point, Stroke } from '../types';
+import type { Annotation, Box, Doc, Point, Stroke } from '../types';
 import { getDoc, saveDoc } from '../lib/db';
 import {
   displaySize,
   highlightColors,
   isStroke,
   rotatePoint,
+  signaturePolylines,
   strokeColors,
   unrotatePoint,
 } from '../lib/annotations';
@@ -14,8 +15,19 @@ import { recognise } from '../lib/ocr';
 import { renderPageCanvas } from '../lib/pdf';
 import { Busy, Overlay, useToast } from './components';
 import PageCanvas from './PageCanvas';
+import SignaturePad from './SignaturePad';
+import DateStamp from './DateStamp';
 
-type Tool = 'pan' | 'draw' | 'highlight' | 'text';
+type Tool = 'pan' | 'draw' | 'highlight' | 'text' | 'sign' | 'date';
+
+const TOOLS: { id: Tool; label: string; key: string }[] = [
+  { id: 'draw', label: 'Pen', key: 'p' },
+  { id: 'highlight', label: 'Highlight', key: 'h' },
+  { id: 'text', label: 'Text', key: 't' },
+  { id: 'sign', label: 'Sign', key: 's' },
+  { id: 'date', label: 'Date', key: 'd' },
+  { id: 'pan', label: 'View', key: 'v' },
+];
 
 export default function PageEditor() {
   const { id, pageId } = useParams<{ id: string; pageId: string }>();
@@ -28,6 +40,10 @@ export default function PageEditor() {
   const [width, setWidth] = useState(0.004);
   const [live, setLive] = useState<Stroke | null>(null);
   const [textAt, setTextAt] = useState<Point | null>(null);
+  // Signing marks out an area first, then asks for the signature.
+  const [marking, setMarking] = useState<{ from: Point; to: Point } | null>(null);
+  const [signBox, setSignBox] = useState<Box | null>(null);
+  const [dateAt, setDateAt] = useState<Point | null>(null);
   const [textValue, setTextValue] = useState('');
   const [busy, setBusy] = useState<{ label: string; ratio?: number } | null>(null);
   const [showOcr, setShowOcr] = useState(false);
@@ -91,26 +107,10 @@ export default function PageEditor() {
         const next = doc.pages[pageIndexEarly + delta];
         if (next) navigate(`/doc/${doc.id}/page/${next.id}`);
       };
-      switch (e.key) {
-        case 'ArrowLeft':
-          go(-1);
-          break;
-        case 'ArrowRight':
-          go(1);
-          break;
-        case 'p':
-          setTool('draw');
-          break;
-        case 'h':
-          setTool('highlight');
-          break;
-        case 't':
-          setTool('text');
-          break;
-        case 'v':
-          setTool('pan');
-          break;
-      }
+      if (e.key === 'ArrowLeft') return go(-1);
+      if (e.key === 'ArrowRight') return go(1);
+      const tool = TOOLS.find((t) => t.key === e.key.toLowerCase());
+      if (tool) setTool(tool.id);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -155,6 +155,15 @@ export default function PageEditor() {
       setTextValue('');
       return;
     }
+    if (tool === 'date') {
+      setDateAt(p);
+      return;
+    }
+    if (tool === 'sign') {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setMarking({ from: p, to: p });
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
     setLive({
       kind: tool,
@@ -165,13 +174,52 @@ export default function PageEditor() {
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (!live || !page) return;
+    if (!page) return;
     const p = toView(e);
     if (!p) return;
+
+    if (marking) {
+      setMarking({ ...marking, to: p });
+      return;
+    }
+    if (!live) return;
     setLive({ ...live, points: [...live.points, unrotatePoint(p, page.rotation)] });
   }
 
+  /** Turns the dragged rectangle into a box in unrotated page coordinates. */
+  function finishMarking() {
+    if (!marking || !page) return;
+    const { from, to } = marking;
+    setMarking(null);
+
+    const a = unrotatePoint(from, page.rotation);
+    const b = unrotatePoint(to, page.rotation);
+    const box: Box = {
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      w: Math.abs(b.x - a.x),
+      h: Math.abs(b.y - a.y),
+    };
+    // A tap rather than a drag: give a sensible default area to sign in.
+    if (box.w < 0.04 || box.h < 0.02) {
+      const w = 0.34;
+      const h = 0.09;
+      setSignBox({
+        x: Math.max(0, Math.min(1 - w, a.x - w / 2)),
+        y: Math.max(0, Math.min(1 - h, a.y - h / 2)),
+        w,
+        h,
+      });
+    } else {
+      setSignBox(box);
+    }
+  }
+
   function endStroke() {
+    if (marking) {
+      finishMarking();
+      return;
+    }
     if (!live || !page) return;
     commit([...page.annotations, live]);
     setLive(null);
@@ -298,6 +346,27 @@ export default function PageEditor() {
                   />
                 );
               }
+              if (a.kind === 'signature') {
+                const { lines, strokeWidth } = signaturePolylines(a, page.width, page.height);
+                return (
+                  <g key={i}>
+                    {lines.map((line, n) => (
+                      <polyline
+                        key={n}
+                        points={line
+                          .map((p) => rotatePoint(p, page.rotation))
+                          .map((p) => `${p.x * view.width},${p.y * view.height}`)
+                          .join(' ')}
+                        fill="none"
+                        stroke={a.color}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    ))}
+                  </g>
+                );
+              }
               const at = rotatePoint(a.at, page.rotation);
               const size = a.size * page.height;
               return (
@@ -317,24 +386,33 @@ export default function PageEditor() {
                 </text>
               );
             })}
+            {marking && (
+              <rect
+                x={Math.min(marking.from.x, marking.to.x) * view.width}
+                y={Math.min(marking.from.y, marking.to.y) * view.height}
+                width={Math.abs(marking.to.x - marking.from.x) * view.width}
+                height={Math.abs(marking.to.y - marking.from.y) * view.height}
+                className="marquee"
+              />
+            )}
           </svg>
         )}
       </div>
 
       <div className="tool-bar">
-        {(['draw', 'highlight', 'text', 'pan'] as Tool[]).map((t) => (
+        {TOOLS.map((t) => (
           <button
-            key={t}
+            key={t.id}
             className="chip"
-            aria-pressed={tool === t}
-            title={`${t === 'draw' ? 'Pen' : t === 'highlight' ? 'Highlight' : t === 'text' ? 'Text' : 'View'} (${t[0]})`}
+            aria-pressed={tool === t.id}
+            title={`${t.label} (${t.key})`}
             onClick={() => {
-              setTool(t);
-              if (t === 'highlight' && !highlightColors.includes(color)) setColor(highlightColors[0]);
-              if (t !== 'highlight' && !strokeColors.includes(color)) setColor(strokeColors[0]);
+              setTool(t.id);
+              if (t.id === 'highlight' && !highlightColors.includes(color)) setColor(highlightColors[0]);
+              if (t.id !== 'highlight' && !strokeColors.includes(color)) setColor(strokeColors[0]);
             }}
           >
-            {t === 'draw' ? 'Pen' : t === 'highlight' ? 'Highlight' : t === 'text' ? 'Text' : 'View'}
+            {t.label}
           </button>
         ))}
         <div className="swatches">
@@ -400,6 +478,33 @@ export default function PageEditor() {
             </button>
           </div>
         </Overlay>
+      )}
+
+      {signBox && (
+        <SignaturePad
+          onCancel={() => setSignBox(null)}
+          onDone={({ strokes, aspect }) => {
+            commit([
+              ...page.annotations,
+              { kind: 'signature', color: '#12162a', box: signBox, aspect, width: 0.05, strokes },
+            ]);
+            setSignBox(null);
+            toast('Signature placed');
+          }}
+        />
+      )}
+
+      {dateAt && (
+        <DateStamp
+          onCancel={() => setDateAt(null)}
+          onDone={(text) => {
+            commit([
+              ...page.annotations,
+              { kind: 'text', color, size: 0.024, at: unrotatePoint(dateAt, page.rotation), text },
+            ]);
+            setDateAt(null);
+          }}
+        />
       )}
 
       {showOcr && (
