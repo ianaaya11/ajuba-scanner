@@ -3,9 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { Annotation, Box, Doc, Point, Stroke } from '../types';
 import { getDoc, saveDoc } from '../lib/db';
 import {
+  annotationBounds,
+  annotationLabel,
   displaySize,
+  hitTest,
   highlightColors,
   isStroke,
+  moveAnnotation,
   rotatePoint,
   signaturePolylines,
   strokeColors,
@@ -18,9 +22,10 @@ import PageCanvas from './PageCanvas';
 import SignaturePad from './SignaturePad';
 import DateStamp from './DateStamp';
 
-type Tool = 'pan' | 'draw' | 'highlight' | 'text' | 'sign' | 'date';
+type Tool = 'pan' | 'draw' | 'highlight' | 'text' | 'sign' | 'date' | 'select';
 
 const TOOLS: { id: Tool; label: string; key: string }[] = [
+  { id: 'select', label: 'Select', key: 'e' },
   { id: 'draw', label: 'Pen', key: 'p' },
   { id: 'highlight', label: 'Highlight', key: 'h' },
   { id: 'text', label: 'Text', key: 't' },
@@ -44,6 +49,10 @@ export default function PageEditor() {
   const [marking, setMarking] = useState<{ from: Point; to: Point } | null>(null);
   const [signBox, setSignBox] = useState<Box | null>(null);
   const [dateAt, setDateAt] = useState<Point | null>(null);
+  // Index into page.annotations, so a bad mark can be removed on its own
+  // rather than undoing everything after it.
+  const [selected, setSelected] = useState<number | null>(null);
+  const dragFrom = useRef<Point | null>(null);
   const [textValue, setTextValue] = useState('');
   const [busy, setBusy] = useState<{ label: string; ratio?: number } | null>(null);
   const [showOcr, setShowOcr] = useState(false);
@@ -52,6 +61,7 @@ export default function PageEditor() {
   const [box, setBox] = useState({ left: 0, top: 0, width: 0, height: 0 });
 
   const commitRef = useRef<((a: Annotation[]) => void) | null>(null);
+  const selectedRef = useRef<number | null>(null);
   const page = doc?.pages.find((p) => p.id === pageId);
   const view = page ? displaySize(page.width, page.height, page.rotation) : { width: 1, height: 1 };
 
@@ -107,6 +117,16 @@ export default function PageEditor() {
         const next = doc.pages[pageIndexEarly + delta];
         if (next) navigate(`/doc/${doc.id}/page/${next.id}`);
       };
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRef.current !== null) {
+        e.preventDefault();
+        const current = doc.pages.find((p) => p.id === pageId);
+        if (current) {
+          commitRef.current?.(current.annotations.filter((_, i) => i !== selectedRef.current));
+          setSelected(null);
+        }
+        return;
+      }
+      if (e.key === 'Escape') return setSelected(null);
       if (e.key === 'ArrowLeft') return go(-1);
       if (e.key === 'ArrowRight') return go(1);
       const tool = TOOLS.find((t) => t.key === e.key.toLowerCase());
@@ -115,6 +135,18 @@ export default function PageEditor() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [doc, pageId, pageIndexEarly, navigate]);
+
+  // Clear the selection when moving to a different page, or when leaving the
+  // select tool. Switching *to* select must not clear it, or a programmatic
+  // selection — such as a freshly placed signature — is wiped by this effect
+  // running after it.
+  useEffect(() => {
+    setSelected(null);
+  }, [pageId]);
+
+  useEffect(() => {
+    if (tool !== 'select') setSelected(null);
+  }, [tool]);
 
   const commit = useCallback(
     async (annotations: Annotation[]) => {
@@ -134,6 +166,10 @@ export default function PageEditor() {
   useEffect(() => {
     commitRef.current = commit;
   }, [commit]);
+
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
 
   /** Pointer position as a fraction of the displayed page. */
   function toView(e: React.PointerEvent): Point | null {
@@ -164,6 +200,15 @@ export default function PageEditor() {
       setMarking({ from: p, to: p });
       return;
     }
+    if (tool === 'select') {
+      const hit = hitTest(page.annotations, unrotatePoint(p, page.rotation), page.width, page.height);
+      setSelected(hit < 0 ? null : hit);
+      if (hit >= 0) {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        dragFrom.current = p;
+      }
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
     setLive({
       kind: tool,
@@ -180,6 +225,16 @@ export default function PageEditor() {
 
     if (marking) {
       setMarking({ ...marking, to: p });
+      return;
+    }
+    if (dragFrom.current !== null && selected !== null) {
+      const from = unrotatePoint(dragFrom.current, page.rotation);
+      const to = unrotatePoint(p, page.rotation);
+      dragFrom.current = p;
+      // Live drag writes straight through; commit persists on release.
+      const next = [...page.annotations];
+      next[selected] = moveAnnotation(next[selected], to.x - from.x, to.y - from.y);
+      setDoc({ ...doc!, pages: doc!.pages.map((q) => (q.id === page.id ? { ...q, annotations: next } : q)) });
       return;
     }
     if (!live) return;
@@ -216,6 +271,11 @@ export default function PageEditor() {
   }
 
   function endStroke() {
+    if (dragFrom.current !== null) {
+      dragFrom.current = null;
+      if (page) commit(page.annotations);
+      return;
+    }
     if (marking) {
       finishMarking();
       return;
@@ -317,7 +377,7 @@ export default function PageEditor() {
         onPointerMove={onPointerMove}
         onPointerUp={endStroke}
         onPointerCancel={endStroke}
-        style={{ cursor: tool === 'pan' ? 'default' : 'crosshair' }}
+        style={{ cursor: tool === 'pan' ? 'default' : tool === 'select' ? 'pointer' : 'crosshair' }}
       >
         <PageCanvas page={page} />
         {box.width > 0 && (
@@ -386,6 +446,27 @@ export default function PageEditor() {
                 </text>
               );
             })}
+            {selected !== null && page.annotations[selected] && (() => {
+              const b = annotationBounds(page.annotations[selected], page.width, page.height);
+              // The box is stored unrotated; rotate its corners and re-fit.
+              const corners = [
+                { x: b.x, y: b.y },
+                { x: b.x + b.w, y: b.y },
+                { x: b.x + b.w, y: b.y + b.h },
+                { x: b.x, y: b.y + b.h },
+              ].map((p) => rotatePoint(p, page.rotation));
+              const xs = corners.map((p) => p.x);
+              const ys = corners.map((p) => p.y);
+              return (
+                <rect
+                  className="selection"
+                  x={Math.min(...xs) * view.width}
+                  y={Math.min(...ys) * view.height}
+                  width={(Math.max(...xs) - Math.min(...xs)) * view.width}
+                  height={(Math.max(...ys) - Math.min(...ys)) * view.height}
+                />
+              );
+            })()}
             {marking && (
               <rect
                 x={Math.min(marking.from.x, marking.to.x) * view.width}
@@ -439,6 +520,26 @@ export default function PageEditor() {
         />
       </div>
 
+      {selected !== null && page.annotations[selected] && (
+        <div className="selection-bar">
+          <span className="selection-name">{annotationLabel(page.annotations[selected])} selected</span>
+          <span className="selection-hint">Drag to move</span>
+          <button className="btn sm" onClick={() => setSelected(null)}>
+            Done
+          </button>
+          <button
+            className="btn sm primary danger"
+            onClick={() => {
+              commit(page.annotations.filter((_, i) => i !== selected));
+              setSelected(null);
+              toast('Deleted');
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+
       <div className="actions">
         <button
           className="btn"
@@ -489,7 +590,9 @@ export default function PageEditor() {
               { kind: 'signature', color: '#12162a', box: signBox, aspect, width: 0.05, strokes },
             ]);
             setSignBox(null);
-            toast('Signature placed');
+            setTool('select');
+            setSelected(page.annotations.length);
+            toast('Signature placed — drag to move, or Delete');
           }}
         />
       )}

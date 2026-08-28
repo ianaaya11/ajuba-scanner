@@ -285,6 +285,86 @@ const sigState = await page.evaluate(async () => {
 console.log(`  stored annotations: [${sigState.kinds.join(', ')}]  padOpen=${sigState.padOpen}`);
 check('signature is drawn onto the page', sigState.polylines > 0, `${sigState.polylines} polylines`);
 
+// --- select and delete a bad signature ------------------------------------
+// Placing a signature leaves it selected, so a bad one can go straight out.
+const afterPlace = await page.evaluate(() => ({
+  bar: document.querySelector('.selection-bar')?.textContent ?? null,
+  tool: [...document.querySelectorAll('.chip')].find((c) => c.getAttribute('aria-pressed') === 'true')?.textContent ?? null,
+  outline: !!document.querySelector('.selection'),
+}));
+console.log(`  after place: tool=${afterPlace.tool} bar=${JSON.stringify(afterPlace.bar)} outline=${afterPlace.outline}`);
+check('a placed signature comes up selected', (afterPlace.bar ?? '').includes('Signature'));
+
+// Drag it somewhere else and confirm the stored box actually moved.
+const boxBefore = await page.evaluate(async () => {
+  const db = await new Promise((res, rej) => {
+    const r = indexedDB.open('ajuba-scanner');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+  const docs = await new Promise((res, rej) => {
+    const t = db.transaction('docs').objectStore('docs').getAll();
+    t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error);
+  });
+  const sig = docs.flatMap((d) => d.pages)[0].annotations.find((a) => a.kind === 'signature');
+  return sig.box;
+});
+const canvasBox = await page.evaluate(() => {
+  const r = document.querySelector('.stage canvas').getBoundingClientRect();
+  return { x: r.x, y: r.y, w: r.width, h: r.height };
+});
+const grabX = canvasBox.x + canvasBox.w * (boxBefore.x + boxBefore.w / 2);
+const grabY = canvasBox.y + canvasBox.h * (boxBefore.y + boxBefore.h / 2);
+await page.mouse.move(grabX, grabY);
+await page.mouse.down();
+await page.mouse.move(grabX + canvasBox.w * 0.12, grabY - canvasBox.h * 0.06, { steps: 8 });
+await page.mouse.up();
+await new Promise((r) => setTimeout(r, 700));
+
+const boxAfter = await page.evaluate(async () => {
+  const db = await new Promise((res) => { const r = indexedDB.open('ajuba-scanner'); r.onsuccess = () => res(r.result); });
+  const docs = await new Promise((res) => {
+    const t = db.transaction('docs').objectStore('docs').getAll(); t.onsuccess = () => res(t.result);
+  });
+  const sig = docs.flatMap((d) => d.pages)[0].annotations.find((a) => a.kind === 'signature');
+  return sig.box;
+});
+check('dragging a selected signature moves it',
+  Math.abs(boxAfter.x - boxBefore.x) > 0.05 && boxAfter.y < boxBefore.y,
+  `x ${boxBefore.x.toFixed(3)} -> ${boxAfter.x.toFixed(3)}`);
+
+// Now delete it, and confirm only the signature went.
+await clickText('Delete');
+await new Promise((r) => setTimeout(r, 800));
+const kindsAfterDelete = await page.evaluate(async () => {
+  const db = await new Promise((res) => { const r = indexedDB.open('ajuba-scanner'); r.onsuccess = () => res(r.result); });
+  const docs = await new Promise((res) => {
+    const t = db.transaction('docs').objectStore('docs').getAll(); t.onsuccess = () => res(t.result);
+  });
+  return docs.flatMap((d) => d.pages)[0].annotations.map((a) => a.kind);
+});
+// The date has not been placed yet at this point, so the page should be bare.
+check('deleting the selection removes that mark',
+  !kindsAfterDelete.includes('signature'),
+  `remaining: [${kindsAfterDelete.join(', ')}]`);
+
+// Put a fresh signature back so the export checks still have vector ink.
+await clickChip('Sign');
+await dragBox({ x: 0.12, y: 0.74 }, { x: 0.52, y: 0.86 });
+await page.waitForSelector('.sign-pad', { timeout: 15000 });
+const pad2 = await page.evaluate(() => {
+  const r = document.querySelector('.sign-pad').getBoundingClientRect();
+  return { x: r.x, y: r.y, w: r.width, h: r.height };
+});
+await page.mouse.move(pad2.x + pad2.w * 0.15, pad2.y + pad2.h * 0.6);
+await page.mouse.down();
+for (const [fx, fy] of [[0.35, 0.35], [0.5, 0.7], [0.68, 0.34], [0.85, 0.6]]) {
+  await page.mouse.move(pad2.x + pad2.w * fx, pad2.y + pad2.h * fy, { steps: 4 });
+}
+await page.mouse.up();
+await clickText('Place');
+await page.waitForFunction(() => !document.querySelector('.sign-pad'), { timeout: 10000 });
+await new Promise((r) => setTimeout(r, 700));
+
 await clickChip('Date');
 await page.evaluate(() => {
   const c = document.querySelector('.stage canvas').getBoundingClientRect();

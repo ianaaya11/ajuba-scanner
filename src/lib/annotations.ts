@@ -1,4 +1,4 @@
-import type { Annotation, Point, Signature } from '../types';
+import type { Annotation, Box, Point, Signature } from '../types';
 
 /**
  * Annotations are stored against the unrotated page. Rotation is applied when
@@ -90,4 +90,90 @@ export function packSignature(strokes: Point[][]): { strokes: Point[][]; aspect:
       .filter((s) => s.length > 1)
       .map((s) => s.map((p) => ({ x: (p.x - minX) / w, y: (p.y - minY) / h }))),
   };
+}
+
+/**
+ * Bounding box of an annotation in unrotated, normalised page coordinates.
+ * Used to hit-test a tap and to draw the selection outline.
+ */
+export function annotationBounds(a: Annotation, pageWidth: number, pageHeight: number): Box {
+  if (isStroke(a)) {
+    const xs = a.points.map((p) => p.x);
+    const ys = a.points.map((p) => p.y);
+    // Half the stroke width, converted from page-height units to each axis.
+    const padX = (a.width / 2) * (pageHeight / pageWidth);
+    const padY = a.width / 2;
+    const x = Math.min(...xs) - padX;
+    const y = Math.min(...ys) - padY;
+    return { x, y, w: Math.max(...xs) + padX - x, h: Math.max(...ys) + padY - y };
+  }
+
+  if (a.kind === 'signature') return a.box;
+
+  const lines = a.text.split('\n');
+  const longest = Math.max(...lines.map((l) => l.length), 1);
+  // Helvetica averages a little over half its point size per character; this
+  // only has to be close enough to tap.
+  const w = (longest * a.size * 0.52 * pageHeight) / pageWidth;
+  const h = lines.length * a.size * 1.25;
+  return { x: a.at.x, y: a.at.y, w, h };
+}
+
+/** Grows a box by a margin given in normalised page units. */
+function pad(box: Box, byX: number, byY: number): Box {
+  return { x: box.x - byX, y: box.y - byY, w: box.w + byX * 2, h: box.h + byY * 2 };
+}
+
+/**
+ * The topmost annotation under a point, or -1. Later annotations are drawn on
+ * top, so they are searched first.
+ */
+export function hitTest(
+  annotations: Annotation[],
+  point: Point,
+  pageWidth: number,
+  pageHeight: number,
+  tolerance = 0.02,
+): number {
+  for (let i = annotations.length - 1; i >= 0; i--) {
+    const box = pad(
+      annotationBounds(annotations[i], pageWidth, pageHeight),
+      (tolerance * pageHeight) / pageWidth,
+      tolerance,
+    );
+    if (
+      point.x >= box.x &&
+      point.x <= box.x + box.w &&
+      point.y >= box.y &&
+      point.y <= box.y + box.h
+    ) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/** Shifts an annotation by a delta in normalised page coordinates. */
+export function moveAnnotation(a: Annotation, dx: number, dy: number): Annotation {
+  if (isStroke(a)) {
+    return { ...a, points: a.points.map((p) => ({ x: p.x + dx, y: p.y + dy })) };
+  }
+  if (a.kind === 'signature') {
+    return { ...a, box: { ...a.box, x: a.box.x + dx, y: a.box.y + dy } };
+  }
+  return { ...a, at: { x: a.at.x + dx, y: a.at.y + dy } };
+}
+
+/** Human name for an annotation, for the selection readout. */
+export function annotationLabel(a: Annotation): string {
+  switch (a.kind) {
+    case 'signature':
+      return 'Signature';
+    case 'highlight':
+      return 'Highlight';
+    case 'draw':
+      return 'Pen mark';
+    default:
+      return a.text.length > 24 ? `“${a.text.slice(0, 24)}…”` : `“${a.text}”`;
+  }
 }

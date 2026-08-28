@@ -24,7 +24,10 @@ the library list or from inside the document itself. On desktop you can drag PDF
 images straight onto the window to import them.
 
 **Annotate and sign** — pen, highlighter, text notes, signatures and date
-stamps. To sign, pick the Sign tool and drag out the area to sign in; the
+stamps. The Select tool picks any single mark: tap it to see it outlined, drag
+to reposition, Delete to remove just that one. A signature comes up selected
+the moment it is placed, so a bad one goes straight back out without undoing
+anything else or rescanning. To sign, pick the Sign tool and drag out the area to sign in; the
 signature is drawn on a pad and fitted into that area preserving its aspect
 ratio, and can be remembered on the device for reuse. The Date tool drops a
 formatted date, or any text you prefer, wherever you tap. Everything exports as
@@ -92,8 +95,8 @@ service worker caches the shell, and the OCR model is cached on first use.
 
 ## Look
 
-Porcelain by day, midnight by night: the palette follows the device's
-`prefers-color-scheme`, and both halves share the same indigo-to-rose accent so
+Porcelain by day, midnight by night. The theme control in the header cycles
+auto, light and dark; auto follows the device's `prefers-color-scheme`, and both halves share the same indigo-to-rose accent so
 the app reads as one identity rather than two. Every colour is a token on
 `:root`; no component rule knows which scheme is active.
 

@@ -39,6 +39,7 @@
   --sheen: rgba(255, 255, 255, .7);
   --panel-bg: rgba(255, 255, 255, .93);
   --mark-opacity: .12;
+  --mark-invert: invert(0);
 
   --shadow: 0 14px 34px -18px rgba(23, 28, 48, .35);
   --shadow-lg: 0 26px 60px -26px rgba(23, 28, 48, .45);
@@ -643,9 +644,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
    panel behind the list, a wireframe reads as a watermark. */
 .backdrop-mark .sheet { fill: none; stroke: var(--text); stroke-width: 1.6; }
 .backdrop-mark .fold { fill: none; stroke: var(--accent); stroke-width: 1.6; }
-/* The contour is already grey ink on transparent; the filter keeps it neutral
-   whatever the scheme tints around it. The sweeping beam is the only colour. */
-.backdrop-mark .photo { filter: grayscale(1); opacity: .95; }
+/* The contour ships as dark ink on transparent, which reads as dark grey on
+   the light ground. On dark it would be ink on ink and vanish, so it is
+   inverted to light grey there. `--mark-invert` is set per scheme. */
+.backdrop-mark .photo {
+  filter: grayscale(1) var(--mark-invert, invert(0));
+  opacity: .95;
+}
 .backdrop-mark .lines rect { fill: var(--text); opacity: .45; }
 .backdrop-mark .brackets {
   fill: none;
@@ -777,7 +782,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   --scrim: rgba(6, 8, 18, .72);
   --sheen: rgba(255, 255, 255, .28);
   --panel-bg: linear-gradient(180deg, rgba(38, 42, 74, .92), rgba(24, 27, 52, .92));
-  --mark-opacity: .15;
+  /* Dark needs a touch more, since light ink on a dark ground reads fainter. */
+  --mark-opacity: .2;
+  --mark-invert: invert(1);
 
   --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
   --shadow-lg: 0 30px 70px -28px rgba(0, 0, 0, .9);
@@ -819,7 +826,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   --scrim: rgba(6, 8, 18, .72);
   --sheen: rgba(255, 255, 255, .28);
   --panel-bg: linear-gradient(180deg, rgba(38, 42, 74, .92), rgba(24, 27, 52, .92));
-  --mark-opacity: .15;
+  /* Dark needs a touch more, since light ink on a dark ground reads fainter. */
+  --mark-opacity: .2;
+  --mark-invert: invert(1);
 
   --shadow: 0 18px 40px -18px rgba(0, 0, 0, .75);
   --shadow-lg: 0 30px 70px -28px rgba(0, 0, 0, .9);
@@ -876,4 +885,44 @@ button { font: inherit; color: inherit; cursor: pointer; }
   stroke-width: 2;
   stroke-dasharray: 7 5;
   vector-effect: non-scaling-stroke;
+}
+
+/* The theme control keeps its word on a roomy header and drops to the glyph
+   alone when space is tight. */
+.theme-toggle { gap: 6px; }
+.theme-toggle span[aria-hidden] { font-size: 15px; line-height: 1; }
+@media (max-width: 420px) {
+  .theme-label { display: none; }
+}
+
+/* ---------- selecting a mark ---------- */
+.selection {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--stroke);
+  background: var(--tint-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  position: relative;
+  z-index: 1;
+}
+.selection-name { font-weight: 600; font-size: 14px; }
+.selection-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin-right: auto;
+}
+@media (max-width: 460px) {
+  .selection-hint { display: none; }
+  .selection-name { margin-right: auto; }
 }

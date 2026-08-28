@@ -11,6 +11,13 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <title>ajuba scanner</title>
+    <script>
+      // Applied before first paint so a forced theme does not flash the other one.
+      try {
+        var t = localStorage.getItem('ajuba.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
