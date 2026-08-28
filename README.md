@@ -101,11 +101,23 @@ Surfaces are translucent with a hairline of light along the top edge, blurred
 where there is something behind them. Blur is deliberately kept off the page
 images so scans stay sharp.
 
-The mark — a page held in viewfinder brackets, crossed by the scan beam — lives
-in `scripts/logo.mjs`, and the favicon, PWA icons and Android launcher icons are
-all rendered from it, so they cannot drift apart. It also sits behind the
-library as an animated watermark, where the beam sweeps the page; that motion
-stops under `prefers-reduced-motion`.
+The mark — a portrait on the page being scanned, held in viewfinder brackets
+and crossed by the beam — lives in `scripts/logo.mjs`. The favicon, PWA icons
+and Android launcher icons all render from it, so they cannot drift apart. The
+same mark sits behind the library as a greyscale watermark with the beam
+sweeping the page; that motion stops under `prefers-reduced-motion`.
+
+The portrait is a **contour**, not the photograph. `scripts/make-contour.mjs`
+runs the source through the same kind of pipeline the scanner itself uses —
+greyscale, blur, Sobel, threshold — tuned for a face rather than a page, then
+crops to head and shoulders and thickens the ink so it survives being shrunk to
+32px, where a photograph turns to mush. Only the derived line art is in this
+repo; the source photograph is not:
+
+```bash
+node scripts/make-contour.mjs /path/to/photo.jpg   # -> brand/contour.png
+npm run assets:icons                               # re-render every icon
+```
 
 ## One UI, two form factors
 

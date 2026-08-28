@@ -1,10 +1,24 @@
 /**
- * The ajuba scanner mark, in one place: a page held in viewfinder brackets
- * with the scan beam crossing it. Everything that needs the logo renders from
- * here — favicon, PWA icons, Android launcher icons.
+ * The ajuba scanner mark, in one place: the portrait being scanned, held in
+ * viewfinder brackets with the beam crossing it. Everything that needs the
+ * logo renders from here — favicon, PWA icons, Android launcher icons.
+ *
+ * The photo is inlined as a data URI so the favicon stays a single file with
+ * no second request.
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const BRAND = { accent: '#6257f5', accent2: '#ef5da8' };
+
+const here = dirname(fileURLToPath(import.meta.url));
+/**
+ * A contour of the portrait rather than the photograph itself: line art holds
+ * up when the mark is shrunk to 32px, where a photo turns to mush. Generated
+ * by scripts/make-contour.mjs.
+ */
+const CONTOUR = `data:image/png;base64,${readFileSync(join(here, '..', 'brand', 'contour.png')).toString('base64')}`;
 
 /**
  * @param {object} o
@@ -30,19 +44,22 @@ export function logoSvg({ tile = true, inset = 0, flat = false } = {}) {
       <stop offset="50%" stop-color="${BRAND.accent2}"/>
       <stop offset="100%" stop-color="${BRAND.accent2}" stop-opacity="0"/>
     </linearGradient>
+    <clipPath id="photo">
+      <rect x="4" y="4" width="40" height="60" rx="3"/>
+    </clipPath>
   </defs>
   ${tile ? `<rect width="128" height="128" rx="30" fill="${fill}"/>` : ''}
   <g transform="translate(64 64) scale(${scale})">
     <g transform="translate(-26 -33)">
       <path d="M4 0 H36 L48 12 V64 A4 4 0 0 1 44 68 H4 A4 4 0 0 1 0 64 V4 A4 4 0 0 1 4 0 Z" fill="#fff"/>
-      <path d="M36 0 L48 12 H38 A2 2 0 0 1 36 10 Z" fill="url(#fold)"/>
-      <g fill="#8e97b5">
-        <rect x="9" y="24" width="30" height="3.4" rx="1.7"/>
-        <rect x="9" y="33" width="22" height="3.4" rx="1.7"/>
-        <rect x="9" y="42" width="30" height="3.4" rx="1.7"/>
-        <rect x="9" y="51" width="17" height="3.4" rx="1.7"/>
+      <image href="${CONTOUR}" x="5" y="4" width="38" height="45"
+             preserveAspectRatio="xMidYMid meet" clip-path="url(#photo)"/>
+      <g fill="#aeb6cc">
+        <rect x="11" y="54" width="26" height="3" rx="1.5"/>
+        <rect x="11" y="60" width="17" height="3" rx="1.5"/>
       </g>
-      <rect x="-7" y="30" width="62" height="5" rx="2.5" fill="url(#beam)"/>
+      <path d="M36 0 L48 12 H38 A2 2 0 0 1 36 10 Z" fill="url(#fold)"/>
+      <rect x="-7" y="44" width="62" height="5" rx="2.5" fill="url(#beam)" opacity=".95"/>
     </g>
     <g stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none">
       <path d="M-42 -30 V-40 A4 4 0 0 1 -38 -44 H-28"/>

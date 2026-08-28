@@ -23,6 +23,9 @@ export default function Backdrop() {
           <clipPath id="backdrop-page">
             <path d="M4 0 H36 L48 12 V64 A4 4 0 0 1 44 68 H4 A4 4 0 0 1 0 64 V4 A4 4 0 0 1 4 0 Z" />
           </clipPath>
+          <clipPath id="backdrop-photo">
+            <rect x="4" y="4" width="40" height="60" rx="3" />
+          </clipPath>
         </defs>
 
         <g transform="translate(64 64)">
@@ -32,11 +35,21 @@ export default function Backdrop() {
               d="M4 0 H36 L48 12 V64 A4 4 0 0 1 44 68 H4 A4 4 0 0 1 0 64 V4 A4 4 0 0 1 4 0 Z"
             />
             <path className="fold" d="M36 0 L48 12 H38 A2 2 0 0 1 36 10 Z" />
+            {/* The contour portrait sits on the page being scanned, as a
+                watermark, matching the mark in scripts/logo.mjs. */}
+            <image
+              className="photo"
+              href={`${import.meta.env.BASE_URL}brand/contour.png`}
+              x="5"
+              y="4"
+              width="38"
+              height="45"
+              preserveAspectRatio="xMidYMid meet"
+              clipPath="url(#backdrop-photo)"
+            />
             <g className="lines">
-              <rect x="9" y="24" width="30" height="3.4" rx="1.7" />
-              <rect x="9" y="33" width="22" height="3.4" rx="1.7" />
-              <rect x="9" y="42" width="30" height="3.4" rx="1.7" />
-              <rect x="9" y="51" width="17" height="3.4" rx="1.7" />
+              <rect x="11" y="54" width="26" height="3" rx="1.5" />
+              <rect x="11" y="60" width="17" height="3" rx="1.5" />
             </g>
             {/* Clipped to the sheet so the light only falls on the page. */}
             <g clipPath="url(#backdrop-page)">
