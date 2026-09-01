@@ -177,3 +177,84 @@ export function annotationLabel(a: Annotation): string {
       return a.text.length > 24 ? `“${a.text.slice(0, 24)}…”` : `“${a.text}”`;
   }
 }
+
+/** Bounds a mark may not grow beyond or shrink below, in page fractions. */
+const LIMITS = {
+  signature: { min: 0.05, max: 1.6 },
+  text: { min: 0.008, max: 0.2 },
+  stroke: { min: 0.0008, max: 0.06 },
+};
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+/** Centre of an annotation's bounds, in unrotated page coordinates. */
+function centreOf(a: Annotation, pageWidth: number, pageHeight: number): Point {
+  const b = annotationBounds(a, pageWidth, pageHeight);
+  return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+}
+
+/**
+ * Grows or shrinks a mark about its own centre, so it stays where it was put
+ * rather than creeping away from its anchor as it is resized.
+ *
+ * Sizes are clamped, and a mark already at a limit comes back unchanged, which
+ * is what lets the UI grey the button out.
+ */
+export function scaleAnnotation(
+  a: Annotation,
+  factor: number,
+  pageWidth: number,
+  pageHeight: number,
+): Annotation {
+  const centre = centreOf(a, pageWidth, pageHeight);
+
+  if (a.kind === 'signature') {
+    const w = clamp(a.box.w * factor, LIMITS.signature.min, LIMITS.signature.max);
+    // Height follows the same ratio the width actually achieved, so clamping
+    // one axis cannot distort the box the signature is fitted into.
+    const applied = w / a.box.w;
+    const h = a.box.h * applied;
+    return {
+      ...a,
+      box: { x: centre.x - w / 2, y: centre.y - h / 2, w, h },
+    };
+  }
+
+  if (a.kind === 'text') {
+    const size = clamp(a.size * factor, LIMITS.text.min, LIMITS.text.max);
+    const grown = { ...a, size };
+    // Re-anchor so the centre of the text stays put as it changes size.
+    const after = centreOf(grown, pageWidth, pageHeight);
+    return {
+      ...grown,
+      at: { x: a.at.x + (centre.x - after.x), y: a.at.y + (centre.y - after.y) },
+    };
+  }
+
+  const width = clamp(a.width * factor, LIMITS.stroke.min, LIMITS.stroke.max);
+  const applied = width / a.width;
+  return {
+    ...a,
+    width,
+    points: a.points.map((p) => ({
+      x: centre.x + (p.x - centre.x) * applied,
+      y: centre.y + (p.y - centre.y) * applied,
+    })),
+  };
+}
+
+/** Whether scaling would actually change anything, for enabling the controls. */
+export function canScale(
+  a: Annotation,
+  factor: number,
+  pageWidth: number,
+  pageHeight: number,
+): boolean {
+  const scaled = scaleAnnotation(a, factor, pageWidth, pageHeight);
+  if (scaled.kind === 'signature' && a.kind === 'signature') {
+    return Math.abs(scaled.box.w - a.box.w) > 1e-6;
+  }
+  if (scaled.kind === 'text' && a.kind === 'text') return Math.abs(scaled.size - a.size) > 1e-9;
+  if (isStroke(scaled) && isStroke(a)) return Math.abs(scaled.width - a.width) > 1e-9;
+  return false;
+}

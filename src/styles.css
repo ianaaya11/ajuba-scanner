@@ -1031,3 +1031,12 @@ body::after {
   0%, 100% { transform: translate(0, 0) rotate(6deg); }
   50%      { transform: translate(18px, 30px) rotate(-4deg); }
 }
+
+/* Grab handle on the selection's corner. */
+.resize-handle {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  cursor: nwse-resize;
+}

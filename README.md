@@ -24,8 +24,11 @@ the library list or from inside the document itself. On desktop you can drag PDF
 images straight onto the window to import them.
 
 **Annotate and sign** — pen, highlighter, text notes, signatures and date
-stamps. The Select tool picks any single mark: tap it to see it outlined, drag
-to reposition, Delete to remove just that one. A signature comes up selected
+stamps. The Select tool picks any single mark: tap it to see it outlined, drag to
+reposition, drag the corner handle or use the − and + buttons to resize it, and
+Delete to remove just that one. Resizing works about the mark's own centre, so
+it stays where it was put, and a signature keeps its proportions however far it
+is scaled. A signature comes up selected
 the moment it is placed, so a bad one goes straight back out without undoing
 anything else or rescanning. To sign, pick the Sign tool and drag out the area to sign in; the
 signature is drawn on a pad and fitted into that area preserving its aspect

@@ -332,6 +332,43 @@ check('dragging a selected signature moves it',
   Math.abs(boxAfter.x - boxBefore.x) > 0.05 && boxAfter.y < boxBefore.y,
   `x ${boxBefore.x.toFixed(3)} -> ${boxAfter.x.toFixed(3)}`);
 
+// Resize it: the buttons step, and the box must actually change on disk.
+const readSig = () => page.evaluate(async () => {
+  const db = await new Promise((res) => { const r = indexedDB.open('ajuba-scanner'); r.onsuccess = () => res(r.result); });
+  const docs = await new Promise((res) => {
+    const t = db.transaction('docs').objectStore('docs').getAll(); t.onsuccess = () => res(t.result);
+  });
+  return docs.flatMap((d) => d.pages)[0].annotations.find((a) => a.kind === 'signature');
+});
+
+const beforeGrow = await readSig();
+await page.evaluate(() => document.querySelector('[aria-label="Make larger"]').click());
+await new Promise((r) => setTimeout(r, 600));
+const afterGrow = await readSig();
+check('the larger button grows the signature',
+  afterGrow.box.w > beforeGrow.box.w * 1.1,
+  `w ${beforeGrow.box.w.toFixed(3)} -> ${afterGrow.box.w.toFixed(3)}`);
+
+// Proportions must survive, or the signature ends up stretched.
+const ratioBefore = beforeGrow.box.w / beforeGrow.box.h;
+const ratioAfter = afterGrow.box.w / afterGrow.box.h;
+check('resizing keeps the signature undistorted',
+  Math.abs(ratioBefore - ratioAfter) < 1e-6,
+  `ratio ${ratioBefore.toFixed(4)} -> ${ratioAfter.toFixed(4)}`);
+
+// And it must stay where it was put, not creep across the page.
+const cBefore = { x: beforeGrow.box.x + beforeGrow.box.w / 2, y: beforeGrow.box.y + beforeGrow.box.h / 2 };
+const cAfter = { x: afterGrow.box.x + afterGrow.box.w / 2, y: afterGrow.box.y + afterGrow.box.h / 2 };
+check('it grows about its own centre',
+  Math.hypot(cAfter.x - cBefore.x, cAfter.y - cBefore.y) < 1e-6);
+
+await page.evaluate(() => document.querySelector('[aria-label="Make smaller"]').click());
+await new Promise((r) => setTimeout(r, 600));
+const afterShrink = await readSig();
+check('the smaller button shrinks it back',
+  afterShrink.box.w < afterGrow.box.w,
+  `w ${afterGrow.box.w.toFixed(3)} -> ${afterShrink.box.w.toFixed(3)}`);
+
 // Now delete it, and confirm only the signature went.
 await clickText('Delete');
 await new Promise((r) => setTimeout(r, 800));

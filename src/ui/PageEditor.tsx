@@ -5,12 +5,14 @@ import { getDoc, saveDoc } from '../lib/db';
 import {
   annotationBounds,
   annotationLabel,
+  canScale,
   displaySize,
   hitTest,
   highlightColors,
   isStroke,
   moveAnnotation,
   rotatePoint,
+  scaleAnnotation,
   signaturePolylines,
   strokeColors,
   unrotatePoint,
@@ -53,6 +55,9 @@ export default function PageEditor() {
   // rather than undoing everything after it.
   const [selected, setSelected] = useState<number | null>(null);
   const dragFrom = useRef<Point | null>(null);
+  // Resizing works from the mark as it was when the drag began, so the factor
+  // is absolute rather than compounding frame by frame.
+  const resizing = useRef<{ origin: Annotation; from: number; centre: Point } | null>(null);
   const [textValue, setTextValue] = useState('');
   const [busy, setBusy] = useState<{ label: string; ratio?: number } | null>(null);
   const [showOcr, setShowOcr] = useState(false);
@@ -62,6 +67,7 @@ export default function PageEditor() {
 
   const commitRef = useRef<((a: Annotation[]) => void) | null>(null);
   const selectedRef = useRef<number | null>(null);
+  const scaleRef = useRef<((f: number) => void) | null>(null);
   const page = doc?.pages.find((p) => p.id === pageId);
   const view = page ? displaySize(page.width, page.height, page.rotation) : { width: 1, height: 1 };
 
@@ -127,6 +133,11 @@ export default function PageEditor() {
         return;
       }
       if (e.key === 'Escape') return setSelected(null);
+      if ((e.key === '+' || e.key === '=' || e.key === '-') && selectedRef.current !== null) {
+        e.preventDefault();
+        scaleRef.current?.(e.key === '-' ? 1 / 1.15 : 1.15);
+        return;
+      }
       if (e.key === 'ArrowLeft') return go(-1);
       if (e.key === 'ArrowRight') return go(1);
       const tool = TOOLS.find((t) => t.key === e.key.toLowerCase());
@@ -147,6 +158,18 @@ export default function PageEditor() {
   useEffect(() => {
     if (tool !== 'select') setSelected(null);
   }, [tool]);
+
+  /** Grows or shrinks the selected mark about its centre. */
+  const scaleSelected = useCallback(
+    (factor: number) => {
+      if (selected === null || !page || !doc) return;
+      const next = [...page.annotations];
+      next[selected] = scaleAnnotation(next[selected], factor, page.width, page.height);
+      setDoc({ ...doc, pages: doc.pages.map((q) => (q.id === page.id ? { ...q, annotations: next } : q)) });
+      commitRef.current?.(next);
+    },
+    [selected, page, doc],
+  );
 
   const commit = useCallback(
     async (annotations: Annotation[]) => {
@@ -170,6 +193,10 @@ export default function PageEditor() {
   useEffect(() => {
     selectedRef.current = selected;
   }, [selected]);
+
+  useEffect(() => {
+    scaleRef.current = scaleSelected;
+  }, [scaleSelected]);
 
   /** Pointer position as a fraction of the displayed page. */
   function toView(e: React.PointerEvent): Point | null {
@@ -201,7 +228,26 @@ export default function PageEditor() {
       return;
     }
     if (tool === 'select') {
-      const hit = hitTest(page.annotations, unrotatePoint(p, page.rotation), page.width, page.height);
+      const local = unrotatePoint(p, page.rotation);
+
+      // The resize handle sits on the selection corner and takes precedence,
+      // or dragging it would just move the mark instead.
+      if (selected !== null && page.annotations[selected]) {
+        const b = annotationBounds(page.annotations[selected], page.width, page.height);
+        const corner = { x: b.x + b.w, y: b.y + b.h };
+        const reach = 0.05;
+        if (Math.abs(local.x - corner.x) < reach && Math.abs(local.y - corner.y) < reach) {
+          const centre = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+          const from = Math.hypot(local.x - centre.x, local.y - centre.y);
+          if (from > 1e-4) {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            resizing.current = { origin: page.annotations[selected], from, centre };
+            return;
+          }
+        }
+      }
+
+      const hit = hitTest(page.annotations, local, page.width, page.height);
       setSelected(hit < 0 ? null : hit);
       if (hit >= 0) {
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -225,6 +271,15 @@ export default function PageEditor() {
 
     if (marking) {
       setMarking({ ...marking, to: p });
+      return;
+    }
+    if (resizing.current && selected !== null) {
+      const { origin, from, centre } = resizing.current;
+      const local = unrotatePoint(p, page.rotation);
+      const now = Math.hypot(local.x - centre.x, local.y - centre.y);
+      const next = [...page.annotations];
+      next[selected] = scaleAnnotation(origin, now / from, page.width, page.height);
+      setDoc({ ...doc!, pages: doc!.pages.map((q) => (q.id === page.id ? { ...q, annotations: next } : q)) });
       return;
     }
     if (dragFrom.current !== null && selected !== null) {
@@ -271,6 +326,11 @@ export default function PageEditor() {
   }
 
   function endStroke() {
+    if (resizing.current !== null) {
+      resizing.current = null;
+      if (page) commit(page.annotations);
+      return;
+    }
     if (dragFrom.current !== null) {
       dragFrom.current = null;
       if (page) commit(page.annotations);
@@ -457,14 +517,25 @@ export default function PageEditor() {
               ].map((p) => rotatePoint(p, page.rotation));
               const xs = corners.map((p) => p.x);
               const ys = corners.map((p) => p.y);
+              const corner = rotatePoint({ x: b.x + b.w, y: b.y + b.h }, page.rotation);
               return (
-                <rect
-                  className="selection"
-                  x={Math.min(...xs) * view.width}
-                  y={Math.min(...ys) * view.height}
-                  width={(Math.max(...xs) - Math.min(...xs)) * view.width}
-                  height={(Math.max(...ys) - Math.min(...ys)) * view.height}
-                />
+                <g>
+                  <rect
+                    className="selection"
+                    x={Math.min(...xs) * view.width}
+                    y={Math.min(...ys) * view.height}
+                    width={(Math.max(...xs) - Math.min(...xs)) * view.width}
+                    height={(Math.max(...ys) - Math.min(...ys)) * view.height}
+                  />
+                  {/* Drag this corner to resize; the buttons below do the same
+                      in steps, which is easier to hit on a phone. */}
+                  <circle
+                    className="resize-handle"
+                    cx={corner.x * view.width}
+                    cy={corner.y * view.height}
+                    r={Math.max(view.width, view.height) * 0.018}
+                  />
+                </g>
               );
             })()}
             {marking && (
@@ -523,7 +594,25 @@ export default function PageEditor() {
       {selected !== null && page.annotations[selected] && (
         <div className="selection-bar">
           <span className="selection-name">{annotationLabel(page.annotations[selected])} selected</span>
-          <span className="selection-hint">Drag to move</span>
+          <span className="selection-hint">Drag to move, corner to resize</span>
+          <button
+            className="btn sm icon"
+            onClick={() => scaleSelected(1 / 1.15)}
+            disabled={!canScale(page.annotations[selected], 1 / 1.15, page.width, page.height)}
+            aria-label="Make smaller"
+            title="Make smaller"
+          >
+            −
+          </button>
+          <button
+            className="btn sm icon"
+            onClick={() => scaleSelected(1.15)}
+            disabled={!canScale(page.annotations[selected], 1.15, page.width, page.height)}
+            aria-label="Make larger"
+            title="Make larger"
+          >
+            +
+          </button>
           <button className="btn sm" onClick={() => setSelected(null)}>
             Done
           </button>
