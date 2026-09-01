@@ -31,12 +31,21 @@ export default function CameraCapture({
   onCapture,
   onPickFile,
   onCancel,
+  guideAspect = null,
+  guideLabel,
+  children,
 }: {
   onCapture: (blob: Blob) => void;
   onPickFile: () => void;
   onCancel: () => void;
+  /** Width / height of what is being scanned, for the framing guide. */
+  guideAspect?: number | null;
+  guideLabel?: string;
+  children?: React.ReactNode;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [guideBox, setGuideBox] = useState<{ width: number; height: number } | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [ready, setReady] = useState(false);
@@ -108,6 +117,33 @@ export default function CameraCapture({
   // Release the camera when the screen goes away, or the light stays on.
   useEffect(() => stop, [stop]);
 
+  /**
+   * Size the framing guide from the picture itself. Doing this in CSS needs a
+   * max-height as well as a width, and whichever one clamps first silently
+   * distorts the ratio — the guide then shows the wrong shape to frame against.
+   */
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame || !guideAspect) {
+      setGuideBox(null);
+      return;
+    }
+    const measure = () => {
+      const w = frame.clientWidth;
+      const h = frame.clientHeight;
+      if (!w || !h) return;
+      const maxW = w * 0.86;
+      const maxH = h * 0.78;
+      // Contain: the larger of the two that still fits inside both limits.
+      const width = Math.min(maxW, maxH * guideAspect);
+      setGuideBox({ width, height: width / guideAspect });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [guideAspect, ready]);
+
   async function shoot() {
     const video = videoRef.current;
     if (!video || !video.videoWidth || busy) return;
@@ -156,12 +192,21 @@ export default function CameraCapture({
       <div className="stage">
         {/* The frame shrink-wraps the video so the guides track the picture
             rather than the letterboxed stage around it. */}
-        <div className="camera-frame">
+        <div className="camera-frame" ref={frameRef}>
           <video ref={videoRef} className="camera-view" playsInline muted autoPlay />
-          {ready && <div className="camera-guide" aria-hidden="true" />}
+          {ready && (
+            <div
+              className={`camera-guide${guideBox ? ' shaped' : ''}`}
+              style={guideBox ? { width: guideBox.width, height: guideBox.height } : undefined}
+              aria-hidden="true"
+            />
+          )}
+          {ready && guideLabel && <div className="camera-caption">{guideLabel}</div>}
         </div>
         {!ready && <div className="empty">Starting camera…</div>}
       </div>
+      {children}
+
       <div className="actions">
         <button className="btn" onClick={onPickFile}>
           Import

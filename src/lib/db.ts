@@ -120,6 +120,31 @@ export async function deleteBlobs(keys: string[]): Promise<void> {
   await tx.done;
 }
 
+/**
+ * Copies a document under a new name, leaving the original untouched.
+ *
+ * Page images are copied rather than shared: two documents pointing at one
+ * blob would mean deleting either of them takes the other's pages with it.
+ */
+export async function duplicateDoc(doc: Doc, name: string): Promise<Doc> {
+  const pages: Page[] = [];
+  for (const page of doc.pages) {
+    const blob = await getBlob(page.imageKey);
+    pages.push({
+      ...page,
+      id: newId(),
+      imageKey: blob ? await putBlob(blob) : page.imageKey,
+      // Annotations are plain data, but they nest, so copy them properly or
+      // editing the copy would reach back into the original.
+      annotations: structuredClone(page.annotations),
+      ocrWords: page.ocrWords ? structuredClone(page.ocrWords) : undefined,
+    });
+  }
+
+  const now = Date.now();
+  return saveDoc({ id: newId(), name, createdAt: now, updatedAt: now, pages });
+}
+
 export function emptyDoc(name = 'Untitled scan'): Doc {
   const now = Date.now();
   return { id: newId(), name, createdAt: now, updatedAt: now, pages: [] };

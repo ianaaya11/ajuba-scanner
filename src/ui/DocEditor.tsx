@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { Doc, Page } from '../types';
-import { deleteBlobs, deleteDoc, emptyDoc, getDoc, saveDoc } from '../lib/db';
+import { deleteBlobs, deleteDoc, duplicateDoc, emptyDoc, getDoc, saveDoc } from '../lib/db';
 import { buildPdf, pdfFilename, renderPageCanvas } from '../lib/pdf';
 import { recognise } from '../lib/ocr';
 import { exportPdf } from '../lib/platform';
@@ -69,6 +69,8 @@ export default function DocEditor() {
   const [confirming, setConfirming] = useState<Page | null>(null);
   const [deletingDoc, setDeletingDoc] = useState(false);
   const [splitting, setSplitting] = useState(false);
+  const [copyName, setCopyName] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(() => {
     if (id) getDoc(id).then((d) => setDoc(d ?? null));
@@ -184,20 +186,15 @@ export default function DocEditor() {
         <button className="btn sm" onClick={runOcr} disabled={!doc.pages.length}>
           OCR
         </button>
+        {/* The rest live behind a menu: four actions plus a title does not fit
+            a phone header, and the document's name is what matters most. */}
         <button
-          className="btn sm"
-          onClick={() => setSplitting(true)}
-          disabled={doc.pages.length < 2}
+          className="btn sm icon"
+          onClick={() => setMenuOpen(true)}
+          aria-label="More actions"
+          title="More actions"
         >
-          Split
-        </button>
-        <button
-          className="btn sm ghost danger"
-          onClick={() => setDeletingDoc(true)}
-          aria-label="Delete this document"
-          title="Delete this document"
-        >
-          Delete
+          ⋯
         </button>
       </header>
 
@@ -259,6 +256,87 @@ export default function DocEditor() {
             navigate('/', { replace: true });
           }}
         />
+      )}
+
+      {menuOpen && (
+        <Overlay onClose={() => setMenuOpen(false)}>
+          <h2>{doc.name}</h2>
+          <p>
+            {doc.pages.length} page{doc.pages.length === 1 ? '' : 's'}
+          </p>
+          <div className="menu-list">
+            <button
+              className="btn"
+              disabled={!doc.pages.length}
+              onClick={() => {
+                setMenuOpen(false);
+                setCopyName(`${doc.name} (copy)`);
+              }}
+            >
+              Save a copy
+            </button>
+            <button
+              className="btn"
+              disabled={doc.pages.length < 2}
+              onClick={() => {
+                setMenuOpen(false);
+                setSplitting(true);
+              }}
+            >
+              Split document
+            </button>
+            <button
+              className="btn danger"
+              onClick={() => {
+                setMenuOpen(false);
+                setDeletingDoc(true);
+              }}
+            >
+              Delete document
+            </button>
+          </div>
+        </Overlay>
+      )}
+
+      {copyName !== null && (
+        <Overlay onClose={() => setCopyName(null)}>
+          <h2>Save a copy</h2>
+          <p>
+            The original stays exactly as it is, with its own pages and marks.
+            Editing one will not touch the other.
+          </p>
+          <input
+            type="text"
+            value={copyName}
+            autoFocus
+            onChange={(e) => setCopyName(e.target.value)}
+            aria-label="Name for the copy"
+          />
+          <div className="row">
+            <button className="btn" style={{ flex: 1 }} onClick={() => setCopyName(null)}>
+              Cancel
+            </button>
+            <button
+              className="btn primary"
+              style={{ flex: 1 }}
+              disabled={!copyName.trim()}
+              onClick={async () => {
+                setBusy({ label: 'Copying' });
+                try {
+                  const copy = await duplicateDoc(doc, copyName.trim());
+                  setCopyName(null);
+                  navigate(`/doc/${copy.id}`, { replace: true });
+                } catch (error) {
+                  toast(error instanceof Error ? error.message : 'Could not copy');
+                } finally {
+                  setBusy(null);
+                }
+              }}
+            >
+              Save copy
+            </button>
+          </div>
+        </Overlay>
       )}
 
       {splitting && (

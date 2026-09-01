@@ -95,8 +95,29 @@ function drawAnnotations(
  * text can be selected and copied, while looking exactly like the scan.
  */
 function drawTextLayer(pdfPage: PDFPage, page: Page, font: PDFFont) {
-  if (!page.ocrWords?.length) return;
   const { width: pw, height: ph } = pdfPage.getSize();
+
+  // Corrected text has no word boxes to sit in — they described what the
+  // recogniser read, not what the reader fixed. Lay it out as invisible lines
+  // instead: still searchable and selectable, only less precisely placed.
+  if (!page.ocrWords?.length) {
+    if (!page.ocrText?.trim()) return;
+    const lines = page.ocrText.split('\n').map(winAnsiSafe).filter((l) => l.trim());
+    if (!lines.length) return;
+
+    const size = 10;
+    const step = Math.min(size * 1.35, (ph * 0.94) / lines.length);
+    lines.forEach((line, i) => {
+      pdfPage.drawText(line, {
+        x: pw * 0.03,
+        y: ph - ph * 0.03 - (i + 1) * step,
+        size,
+        font,
+        opacity: 0,
+      });
+    });
+    return;
+  }
 
   for (const word of page.ocrWords) {
     const text = winAnsiSafe(word.text);

@@ -64,8 +64,22 @@ export function quadSize(q: Quad): { width: number; height: number } {
  * inverse mapping — for every destination pixel we look up where it came from
  * in the source and sample bilinearly, which leaves no holes.
  */
-export function warpQuad(src: ImageData, quad: Quad, maxSide = 2400): ImageData {
+export function warpQuad(
+  src: ImageData,
+  quad: Quad,
+  { maxSide = 2400, aspect = null }: { maxSide?: number; aspect?: number | null } = {},
+): ImageData {
   let { width: dw, height: dh } = quadSize(quad);
+
+  // When the true proportions are known — a card, a passport page — use them
+  // instead of what was measured. A quad picked off a photograph taken at an
+  // angle carries real error, and the answer here is not an estimate.
+  if (aspect && aspect > 0) {
+    const area = dw * dh;
+    dh = Math.max(1, Math.round(Math.sqrt(area / aspect)));
+    dw = Math.max(1, Math.round(dh * aspect));
+  }
+
   const scale = Math.min(1, maxSide / Math.max(dw, dh));
   dw = Math.max(1, Math.round(dw * scale));
   dh = Math.max(1, Math.round(dh * scale));

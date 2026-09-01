@@ -107,6 +107,21 @@ describe('warpQuad', () => {
     expect(at(35, 5)).toBeGreaterThan(220);
   });
 
+  it('normalises to a known aspect ratio when one is given', () => {
+    const src = new ImageData(200, 200);
+    src.data.fill(255);
+    // A square quad, but the subject is known to be a bank card.
+    const square: Quad = [
+      { x: 0, y: 0 },
+      { x: 199, y: 0 },
+      { x: 199, y: 199 },
+      { x: 0, y: 199 },
+    ];
+    const card = 85.6 / 54;
+    const out = warpQuad(src, square, { aspect: card });
+    expect(out.width / out.height).toBeCloseTo(card, 2);
+  });
+
   it('caps the output at maxSide while keeping the aspect ratio', () => {
     const src = new ImageData(200, 100);
     src.data.fill(255);
@@ -116,7 +131,7 @@ describe('warpQuad', () => {
       { x: 199, y: 99 },
       { x: 0, y: 99 },
     ];
-    const out = warpQuad(src, quad, 50);
+    const out = warpQuad(src, quad, { maxSide: 50 });
     expect(Math.max(out.width, out.height)).toBeLessThanOrEqual(50);
     expect(out.width / out.height).toBeCloseTo(2, 1);
   });

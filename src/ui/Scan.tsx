@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Doc, FilterId, Point, Quad } from '../types';
+import type { Doc, FilterId, Point, Quad, ScanPreset } from '../types';
+import { SCAN_PRESETS } from '../types';
 import { getDoc, newPage, putBlob, saveDoc } from '../lib/db';
 import { defaultQuad, detectDocumentQuad } from '../lib/detect';
 import { applyFilter } from '../lib/imaging';
@@ -8,6 +9,7 @@ import { imageDataToBlob, imageDataToCanvas, loadScaled } from '../lib/image';
 import { capturePhoto, isNative, pickImages } from '../lib/platform';
 import CameraCapture from './CameraCapture';
 import { warpQuad } from '../lib/warp';
+import { composeSides } from '../lib/compose';
 import { Busy, useToast } from './components';
 
 const FILTERS: { id: FilterId; label: string }[] = [
@@ -62,6 +64,9 @@ export default function Scan() {
     isNative() ? 'crop' : 'camera',
   );
   const [filter, setFilter] = useState<FilterId>('magic');
+  const [preset, setPreset] = useState<ScanPreset>(SCAN_PRESETS[0]);
+  // Finished sides waiting to be laid onto one sheet, for two-sided subjects.
+  const [sides, setSides] = useState<ImageData[]>([]);
   const [preview, setPreview] = useState<ImageData | null>(null);
   const [warped, setWarped] = useState<ImageData | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -182,18 +187,31 @@ export default function Scan() {
     if (!source || !quad) return;
     setBusy('Straightening');
     setTimeout(() => {
-      const result = warpQuad(source, quad);
+      const result = warpQuad(source, quad, { aspect: preset.aspect });
       setWarped(result);
       setStep('filter');
       setBusy(null);
     }, 30);
   }
 
+  /** Keeps the current side and returns to the camera for the other one. */
+  function keepSide() {
+    if (!warped) return;
+    setSides([...sides, applyFilter(warped, filter)]);
+    setSource(null);
+    setWarped(null);
+    setPreview(null);
+    setStep('camera');
+  }
+
   async function savePage(then: 'more' | 'done') {
     if (!warped || !doc) return;
     setBusy('Saving page');
     try {
-      const finished = applyFilter(warped, filter);
+      const current = applyFilter(warped, filter);
+      // Two-sided subjects are laid onto a single sheet, the way a photocopied
+      // ID is normally presented.
+      const finished = sides.length ? composeSides([...sides, current]) : current;
       const blob = await imageDataToBlob(finished, 0.9);
       const key = await putBlob(blob);
       const updated = await saveDoc({
@@ -202,6 +220,7 @@ export default function Scan() {
       });
       setDoc(updated);
 
+      setSides([]);
       if (then === 'done') {
         navigate(`/doc/${updated.id}`, { replace: true });
         return;
@@ -243,7 +262,13 @@ export default function Scan() {
           ‹
         </button>
         <h1>
-          {step === 'camera' ? 'Position the page' : step === 'crop' ? 'Adjust corners' : 'Choose a look'}
+          {step === 'camera'
+            ? sides.length
+              ? 'Now the other side'
+              : `Position the ${preset.id === 'page' ? 'page' : preset.label}`
+            : step === 'crop'
+              ? 'Adjust corners'
+              : 'Choose a look'}
         </h1>
         <span style={{ color: 'var(--muted)', fontSize: 13 }}>
           {doc ? `${doc.pages.length} saved` : ''}
@@ -255,7 +280,29 @@ export default function Scan() {
           onCapture={beginPhoto}
           onPickFile={importImages}
           onCancel={() => navigate(`/doc/${id}`)}
-        />
+          guideAspect={preset.aspect}
+          guideLabel={sides.length ? 'Back side' : preset.hint}
+        >
+          {/* Choosing the subject up front lets the camera frame it and the
+              crop be normalised to its real proportions. */}
+          {!sides.length && (
+            <div className="filter-strip">
+              {SCAN_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  className="chip"
+                  aria-pressed={preset.id === p.id}
+                  onClick={() => {
+                    setPreset(p);
+                    setFilter(p.filter);
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </CameraCapture>
       )}
 
       {step !== 'camera' && (
@@ -335,12 +382,25 @@ export default function Scan() {
             <button className="btn" onClick={() => setStep('crop')}>
               Back
             </button>
-            <button className="btn" onClick={() => savePage('more')}>
-              Save + scan next
-            </button>
-            <button className="btn primary" onClick={() => savePage('done')}>
-              Done
-            </button>
+            {preset.twoSided && !sides.length ? (
+              <>
+                <button className="btn" onClick={() => savePage('done')}>
+                  This side only
+                </button>
+                <button className="btn primary" onClick={keepSide}>
+                  Add back side
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn" onClick={() => savePage('more')}>
+                  Save + scan next
+                </button>
+                <button className="btn primary" onClick={() => savePage('done')}>
+                  Done
+                </button>
+              </>
+            )}
           </>
         )}
       </div>

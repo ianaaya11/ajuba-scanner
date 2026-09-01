@@ -422,6 +422,32 @@ await clickText('Place');
 await page.waitForFunction(() => !document.querySelector('.date-input'), { timeout: 10000 });
 check('date stamp placed', true, dateText);
 
+// --- correct the recognised text -------------------------------------------
+await clickText('Text');
+await page.waitForSelector('.ocr-edit', { timeout: 20000 });
+const CORRECTION = 'Zzyzx correction marker';
+await page.evaluate((extra) => {
+  const ta = document.querySelector('.ocr-edit');
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+  setter.call(ta, ta.value + '\n' + extra);
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}, CORRECTION);
+await clickText('Save text');
+await new Promise((r) => setTimeout(r, 900));
+
+const edited = await page.evaluate(async () => {
+  const db = await new Promise((res) => { const r = indexedDB.open('ajuba-scanner'); r.onsuccess = () => res(r.result); });
+  const docs = await new Promise((res) => {
+    const t = db.transaction('docs').objectStore('docs').getAll(); t.onsuccess = () => res(t.result);
+  });
+  const pg = docs.flatMap((d) => d.pages)[0];
+  return { text: pg.ocrText ?? '', words: pg.ocrWords?.length ?? 0, flagged: !!pg.ocrEdited };
+});
+check('corrected text is saved', edited.text.includes(CORRECTION));
+// The boxes describe what was read, not what was corrected.
+check('word boxes are dropped once the text is corrected',
+  edited.words === 0 && edited.flagged, `${edited.words} words, edited=${edited.flagged}`);
+
 await page.evaluate(() => history.back());
 await page.waitForSelector('.page-grid', { timeout: 20000 });
 await new Promise((r) => setTimeout(r, 600));
@@ -456,6 +482,10 @@ if (file) {
   // content stream is signature ink and nothing else.
   const paths = await countVectorPaths(bytes);
   check('signature is written into the PDF as vectors', paths > 0, `${paths} vector paths`);
+
+  // The whole point of correcting the text: search must find the correction.
+  check('the corrected text is what the PDF carries',
+    extracted.includes('Zzyzx'), 'correction present in the text layer');
   console.log(`  exported ${file} (${(bytes.length / 1024).toFixed(0)} KB, ${pdf.getPageCount()} page)`);
 }
 

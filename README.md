@@ -9,7 +9,14 @@ account, no server, no upload.
 
 ## What it does
 
-**Scan** — a live camera with framing guides opens in the browser (the Android
+**Scan** — choose what you are scanning first: a document, an ID card, a
+passport page, or a photo. The camera guide takes that subject's true shape,
+and the crop is normalised to its real proportions rather than to an estimate
+taken from a photograph at an angle — a driving licence comes out exactly
+85.6 x 54, whatever angle it was shot from. Cards offer both sides, laid onto a
+single sheet the way a photocopied ID is normally presented.
+
+A live camera with framing guides opens in the browser (the Android
 app uses the system camera). Take a photo and the page boundary is found automatically with a
 Sobel + Hough line detector. Drag any of the four corners to correct it, then a
 perspective warp flattens the page into a rectangle.
@@ -41,9 +48,19 @@ unrotated page space, so rotating a page never disturbs what is on it, and they
 are drawn into the exported PDF as real vector content rather than flattened
 pixels.
 
-**OCR** — Tesseract runs fully offline (the model ships with the app). Exported
-PDFs get a positioned invisible text layer, so the scan stays a scan but the
-text is searchable and selectable in any PDF reader.
+**OCR, and correcting it** — Tesseract runs fully offline (the model ships with
+the app). Exported PDFs get a positioned invisible text layer, so the scan stays
+a scan but the text is searchable and selectable in any PDF reader.
+
+Recognised text can be edited by hand to fix whatever the recogniser misread,
+and the correction is what the exported PDF carries. Correcting the text drops
+the per-word boxes — they describe what was read, not what was fixed — so the
+layer is then laid out as lines: still searchable and selectable, only less
+precisely placed. Re-running OCR restores the positioned version.
+
+**Save a copy** — duplicates a document under a new name with its own page
+images, so the original scan stays exactly as it was. Editing one never reaches
+the other.
 
 Open it in a browser and install it as a desktop app, or build the Android APK
 below. Pushing to `main` rebuilds and redeploys the site automatically.

@@ -61,6 +61,7 @@ export default function PageEditor() {
   const [textValue, setTextValue] = useState('');
   const [busy, setBusy] = useState<{ label: string; ratio?: number } | null>(null);
   const [showOcr, setShowOcr] = useState(false);
+  const [draftText, setDraftText] = useState('');
 
   const stageRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ left: 0, top: 0, width: 0, height: 0 });
@@ -378,6 +379,7 @@ export default function PageEditor() {
           ),
         }),
       );
+      setDraftText(result.text);
       setShowOcr(true);
     } catch (error) {
       toast(error instanceof Error ? error.message : 'OCR failed');
@@ -417,7 +419,11 @@ export default function PageEditor() {
         </h1>
         <button
           className="btn sm"
-          onClick={() => (page.ocrText ? setShowOcr(true) : ocrThisPage())}
+          onClick={() => {
+            setDraftText(page.ocrText ?? '');
+            if (page.ocrText) setShowOcr(true);
+            else ocrThisPage();
+          }}
         >
           {page.ocrText ? 'Text' : 'OCR'}
         </button>
@@ -722,13 +728,24 @@ export default function PageEditor() {
       {showOcr && (
         <Overlay onClose={() => setShowOcr(false)}>
           <h2>Recognised text</h2>
-          <div className="ocr-text">{page.ocrText || 'Nothing was recognised on this page.'}</div>
+          <p>
+            Correct anything the recogniser misread. The exported PDF carries this
+            text, so search finds what you fixed.
+          </p>
+          <textarea
+            className="ocr-edit"
+            rows={12}
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            placeholder="Nothing was recognised on this page."
+            aria-label="Recognised text"
+          />
           <div className="row">
             <button
               className="btn"
               style={{ flex: 1 }}
               onClick={() => {
-                navigator.clipboard?.writeText(page.ocrText ?? '');
+                navigator.clipboard?.writeText(draftText);
                 toast('Copied');
               }}
             >
@@ -737,8 +754,35 @@ export default function PageEditor() {
             <button className="btn" style={{ flex: 1 }} onClick={ocrThisPage}>
               Re-run
             </button>
-            <button className="btn primary" style={{ flex: 1 }} onClick={() => setShowOcr(false)}>
-              Close
+            <button
+              className="btn primary"
+              style={{ flex: 1 }}
+              onClick={async () => {
+                const changed = draftText !== (page.ocrText ?? '');
+                if (changed) {
+                  setDoc(
+                    await saveDoc({
+                      ...doc,
+                      pages: doc.pages.map((q) =>
+                        q.id === page.id
+                          ? {
+                              ...q,
+                              ocrText: draftText,
+                              // The word boxes describe what was read, not what
+                              // was corrected, so they no longer apply.
+                              ocrWords: undefined,
+                              ocrEdited: true,
+                            }
+                          : q,
+                      ),
+                    }),
+                  );
+                  toast('Text saved');
+                }
+                setShowOcr(false);
+              }}
+            >
+              {draftText !== (page.ocrText ?? '') ? 'Save text' : 'Close'}
             </button>
           </div>
         </Overlay>

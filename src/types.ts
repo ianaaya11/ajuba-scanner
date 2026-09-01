@@ -71,7 +71,38 @@ export interface Page {
   annotations: Annotation[];
   ocrText?: string;
   ocrWords?: OcrWord[];
+  /**
+   * Set once the recognised text has been corrected by hand. The word boxes no
+   * longer describe the edited text, so they are dropped and the export lays
+   * the corrected text out as lines instead.
+   */
+  ocrEdited?: boolean;
 }
+
+/**
+ * What is being scanned. Knowing this lets the camera frame it, and lets the
+ * crop be normalised to the real proportions of the thing rather than to an
+ * estimate taken from a photograph at an angle.
+ */
+export interface ScanPreset {
+  id: 'page' | 'id-card' | 'passport' | 'photo';
+  label: string;
+  hint: string;
+  /** True width / height of the subject, or null to keep what was measured. */
+  aspect: number | null;
+  filter: FilterId;
+  /** Cards have two sides worth keeping together on one page. */
+  twoSided: boolean;
+}
+
+export const SCAN_PRESETS: ScanPreset[] = [
+  { id: 'page', label: 'Document', hint: 'A page of text', aspect: null, filter: 'magic', twoSided: false },
+  // ID-1, the bank-card size used by driving licences and most ID cards.
+  { id: 'id-card', label: 'ID card', hint: 'Licence, ID, bank card', aspect: 85.6 / 54, filter: 'color', twoSided: true },
+  // TD-3 passport data page.
+  { id: 'passport', label: 'Passport', hint: 'Photo page', aspect: 125 / 88, filter: 'color', twoSided: false },
+  { id: 'photo', label: 'Photo', hint: 'Keep the colours', aspect: null, filter: 'color', twoSided: false },
+];
 
 export interface Doc {
   id: string;

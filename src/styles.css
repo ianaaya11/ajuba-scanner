@@ -570,7 +570,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-radius: 6px;
 }
 
-/* Corner marks showing roughly where to hold the page. */
+/* Corner marks showing roughly where to hold the page. With a known subject —
+   a card, a passport page — the guide takes its true shape so the thing can be
+   framed properly rather than approximately. */
+/* Sized in JavaScript from the picture; see CameraCapture. */
+.camera-guide.shaped {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.camera-caption {
+  position: absolute;
+  bottom: 6%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .8);
+  pointer-events: none;
+}
+
 .camera-guide {
   position: absolute;
   inset: 8% 6%;
@@ -1044,3 +1067,26 @@ body::after {
 /* Page stepping is secondary to finishing, so it stays icon-sized while the
    two word buttons share the remaining room. */
 .actions .btn.icon { flex: 0 0 auto; }
+
+.ocr-edit {
+  width: 100%;
+  background: var(--field-bg);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  color: var(--text);
+  padding: 14px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  max-height: 42vh;
+  margin-bottom: 16px;
+}
+.ocr-edit:focus { outline: none; border-color: var(--accent); }
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.menu-list .btn { width: 100%; justify-content: flex-start; }
