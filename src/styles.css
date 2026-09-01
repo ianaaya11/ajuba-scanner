@@ -1040,3 +1040,7 @@ body::after {
   vector-effect: non-scaling-stroke;
   cursor: nwse-resize;
 }
+
+/* Page stepping is secondary to finishing, so it stays icon-sized while the
+   two word buttons share the remaining room. */
+.actions .btn.icon { flex: 0 0 auto; }

@@ -630,22 +630,42 @@ export default function PageEditor() {
       )}
 
       <div className="actions">
+        {/* Page stepping is only meaningful in a document with more than one
+            page; on a single page it left the bar with nothing but a
+            destructive action, and no way forward. */}
+        {doc.pages.length > 1 && (
+          <>
+            <button
+              className="btn icon"
+              onClick={() => navigate(`/doc/${doc.id}/page/${doc.pages[pageIndex - 1].id}`)}
+              disabled={pageIndex === 0}
+              aria-label="Previous page"
+              title="Previous page"
+            >
+              ‹
+            </button>
+            <button
+              className="btn icon"
+              onClick={() => navigate(`/doc/${doc.id}/page/${doc.pages[pageIndex + 1].id}`)}
+              disabled={pageIndex === doc.pages.length - 1}
+              aria-label="Next page"
+              title="Next page"
+            >
+              ›
+            </button>
+          </>
+        )}
         <button
-          className="btn"
-          onClick={() => navigate(`/doc/${doc.id}/page/${doc.pages[pageIndex - 1].id}`)}
-          disabled={pageIndex === 0}
+          className="btn ghost danger"
+          onClick={() => commit([])}
+          disabled={!page.annotations.length}
         >
-          Previous
-        </button>
-        <button className="btn danger" onClick={() => commit([])} disabled={!page.annotations.length}>
           Clear marks
         </button>
-        <button
-          className="btn"
-          onClick={() => navigate(`/doc/${doc.id}/page/${doc.pages[pageIndex + 1].id}`)}
-          disabled={pageIndex === doc.pages.length - 1}
-        >
-          Next
+        {/* Always available: marks are saved as they are made, so this just
+            returns to the document, where the PDF is exported from. */}
+        <button className="btn primary" onClick={() => navigate(`/doc/${doc.id}`)}>
+          Done
         </button>
       </div>
 

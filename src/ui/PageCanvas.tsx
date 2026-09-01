@@ -37,7 +37,15 @@ export default function PageCanvas({
         return;
       }
 
-      let source = imageDataToCanvas(await blobToImageData(blob));
+      let source: HTMLCanvasElement;
+      try {
+        source = imageDataToCanvas(await blobToImageData(blob));
+      } catch {
+        // A corrupt or undecodable image must leave a blank page rather than
+        // an unhandled rejection.
+        if (!cancelled) setFailed(true);
+        return;
+      }
       source = rotateCanvas(source, page.rotation);
 
       const scale = maxSide ? Math.min(1, maxSide / Math.max(source.width, source.height)) : 1;
